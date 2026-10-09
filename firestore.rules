@@ -1,0 +1,40 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper function: cek apakah pengguna sudah login
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Helper function: cek apakah pengguna adalah pemilik data
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Dokumen Profil Peneliti: users/{userId}
+    match /users/{userId} {
+      allow read, write: if isOwner(userId);
+
+      // Subkoleksi Logbook Aktivitas Riset: users/{userId}/logbooks/{logbookId}
+      match /logbooks/{logbookId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      // Subkoleksi Riwayat Transaksi Pembayaran: users/{userId}/transactions/{transactionId}
+      match /transactions/{transactionId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      // Subkoleksi Metadata Tambahan: users/{userId}/meta/{metaId}
+      match /meta/{metaId} {
+        allow read, write: if isOwner(userId);
+      }
+    }
+
+    // Tolak seluruh akses ke dokumen lain di luar koleksi users
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

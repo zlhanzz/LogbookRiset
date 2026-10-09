@@ -1,0 +1,31 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // Helper function: cek apakah pengguna sudah login
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Helper function: cek apakah pengguna adalah pemilik folder
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Folder penyimpanan foto GPS Cam: users/{userId}/photos/{photoId}
+    match /users/{userId}/photos/{photoId} {
+      // Baca diizinkan secara publik agar URL CDN foto dapat disematkan ke dokumen Microsoft Word
+      allow read: if true;
+
+      // Hanya pemilik akun yang dapat mengunggah dan menghapus foto miliknya
+      allow write, delete: if isOwner(userId)
+        && request.resource.size < 10 * 1024 * 1024 // Batas maksimal ukuran 10 MB per foto
+        && request.resource.contentType.matches('image/.*'); // Hanya format gambar yang diizinkan
+    }
+
+    // Tolak semua akses berkas di luar folder users
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

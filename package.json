@@ -1,0 +1,17 @@
+{
+  "name": "logbook-penelitian-lapangan",
+  "version": "1.0.0",
+  "description": "Sistem Logbook Aktivitas Penelitian Lapangan Mahasiswa terhubung Google Spreadsheet dan Ekspor Word .docx",
+  "author": "Tim Pengembang Logbook",
+  "scripts": {
+    "dev": "node local_server.js",
+    "start": "node local_server.js"
+  },
+  "keywords": [
+    "logbook",
+    "penelitian",
+    "mahasiswa",
+    "google-sheets",
+    "docx"
+  ]
+}

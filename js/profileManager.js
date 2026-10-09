@@ -1,0 +1,1017 @@
+/**
+ * ============================================================================
+ * MODUL MANAJEMEN PROFIL RISET & HIRARKI WILAYAH PENELITIAN (PROFILE MANAGER)
+ * Arsitektur Basis Data: Flat Normalized Administrative Records
+ * [ { id, provinsi, kabupaten, kecamatan, desa, dusun } ]
+ * Mendukung migrasi otomatis dari format bersarang lama, rekonstruksi pohon (tree),
+ * dan auto-sync instan ke Cloud Firestore (Zero Data Loss on Refresh).
+ * ============================================================================
+ */
+
+const ProfileManager = {
+  currentProfile: null,
+  STORAGE_KEY: "LOGBOOK_RESEARCH_PROFILE_V3",
+
+  defaultProfile: {
+    name: "",
+    nim: "",
+    major: "",
+    university: "",
+    researchTopic: "",
+    supervisor: "",
+    supervisorNip: "",
+    timezone: "WITA", // WIB | WITA | WIT
+    locations: [],    // Flat Normalized Records: [{ id, provinsi, kabupaten, kecamatan, desa, dusun }]
+    isComplete: false,
+    updatedAt: null
+  },
+
+  getStorageKey(uid) {
+    if (!uid) return "LOGBOOK_RESEARCH_PROFILE_V3";
+    return `LOGBOOK_RESEARCH_PROFILE_V3_${uid}`;
+  },
+
+  /**
+   * Normalisasi & Migrasi Skema Wilayah:
+   * Mengubah format bersarang lama (kecamatans[].desas[].dusuns[])
+   * menjadi format flat normalized berstandar industri:
+   * [{ id, provinsi, kabupaten, kecamatan, desa, dusun }]
+   */
+  normalizeLocations(rawList) {
+    if (!Array.isArray(rawList)) return [];
+
+    const flatList = [];
+
+    rawList.forEach((item, idx) => {
+      if (!item || typeof item !== "object") return;
+
+      // Format Legacy: Memiliki array kecamatans
+      if (Array.isArray(item.kecamatans)) {
+        const prov = String(item.provinsi || "Sulawesi Selatan").trim();
+        const kab = String(item.kabupaten || "").trim();
+        if (!kab) return;
+
+        if (item.kecamatans.length === 0) {
+          flatList.push({
+            id: `loc_mig_${idx}_0`,
+            provinsi: prov,
+            kabupaten: kab,
+            kecamatan: "",
+            desa: "",
+            dusun: ""
+          });
+        } else {
+          item.kecamatans.forEach((kec, kIdx) => {
+            const kecName = typeof kec === "string" ? kec.trim() : String(kec.name || "").trim();
+            const desas = (kec && Array.isArray(kec.desas)) ? kec.desas : [];
+
+            if (desas.length === 0) {
+              flatList.push({
+                id: `loc_mig_${idx}_${kIdx}`,
+                provinsi: prov,
+                kabupaten: kab,
+                kecamatan: kecName,
+                desa: "",
+                dusun: ""
+              });
+            } else {
+              desas.forEach((d, dIdx) => {
+                const desaName = typeof d === "string" ? d.trim() : String(d.name || "").trim();
+                const dusuns = (d && Array.isArray(d.dusuns)) ? d.dusuns : [];
+
+                if (dusuns.length === 0) {
+                  flatList.push({
+                    id: `loc_mig_${idx}_${kIdx}_${dIdx}`,
+                    provinsi: prov,
+                    kabupaten: kab,
+                    kecamatan: kecName,
+                    desa: desaName,
+                    dusun: ""
+                  });
+                } else {
+                  dusuns.forEach((dsn, dsnIdx) => {
+                    flatList.push({
+                      id: `loc_mig_${idx}_${kIdx}_${dIdx}_${dsnIdx}`,
+                      provinsi: prov,
+                      kabupaten: kab,
+                      kecamatan: kecName,
+                      desa: desaName,
+                      dusun: String(dsn || "").trim()
+                    });
+                  });
+                }
+              });
+            }
+          });
+        }
+      } else if (item.kabupaten) {
+        // Format Flat Standar
+        flatList.push({
+          id: item.id || `loc_${Date.now()}_${idx}`,
+          provinsi: String(item.provinsi || "Sulawesi Selatan").trim(),
+          kabupaten: String(item.kabupaten || "").trim(),
+          kecamatan: String(item.kecamatan || "").trim(),
+          desa: String(item.desa || "").trim(),
+          dusun: String(item.dusun || "").trim()
+        });
+      }
+    });
+
+    return flatList;
+  },
+
+  /**
+   * Rekonstruksi Pohon Visual (Tree Representation) dari Data Flat
+   * Untuk kemudahan render bertingkat di UI Builder
+   */
+  getTreeLocations() {
+    if (!this.currentProfile || !Array.isArray(this.currentProfile.locations)) return [];
+
+    const tree = [];
+    const kabMap = new Map();
+
+    this.currentProfile.locations.forEach(entry => {
+      const prov = String(entry.provinsi || "Sulawesi Selatan").trim();
+      const kabName = String(entry.kabupaten || "").trim();
+      const kecName = String(entry.kecamatan || "").trim();
+      const desaName = String(entry.desa || "").trim();
+      const dusunName = String(entry.dusun || "").trim();
+
+      if (!kabName) return;
+
+      let kabObj = kabMap.get(kabName.toLowerCase());
+      if (!kabObj) {
+        kabObj = {
+          provinsi: prov,
+          kabupaten: kabName,
+          kecamatans: [],
+          _kecMap: new Map()
+        };
+        kabMap.set(kabName.toLowerCase(), kabObj);
+        tree.push(kabObj);
+      } else if (prov && (!kabObj.provinsi || kabObj.provinsi === "Provinsi Riset")) {
+        kabObj.provinsi = prov;
+      }
+
+      if (!kecName) return;
+
+      let kecObj = kabObj._kecMap.get(kecName.toLowerCase());
+      if (!kecObj) {
+        kecObj = {
+          name: kecName,
+          desas: [],
+          _desaMap: new Map()
+        };
+        kabObj._kecMap.set(kecName.toLowerCase(), kecObj);
+        kabObj.kecamatans.push(kecObj);
+      }
+
+      if (!desaName) return;
+
+      let desaObj = kecObj._desaMap.get(desaName.toLowerCase());
+      if (!desaObj) {
+        desaObj = {
+          name: desaName,
+          dusuns: []
+        };
+        kecObj._desaMap.set(desaName.toLowerCase(), desaObj);
+        kecObj.desas.push(desaObj);
+      }
+
+      if (dusunName && !desaObj.dusuns.some(d => d.toLowerCase() === dusunName.toLowerCase())) {
+        desaObj.dusuns.push(dusunName);
+      }
+    });
+
+    return tree.map(kab => ({
+      provinsi: kab.provinsi,
+      kabupaten: kab.kabupaten,
+      kecamatans: kab.kecamatans.map(kec => ({
+        name: kec.name,
+        desas: kec.desas
+      }))
+    }));
+  },
+
+  /**
+   * Inisialisasi profil dari LocalStorage dan Firestore
+   */
+  async init(user) {
+    const uid = user ? user.uid : null;
+    this.loadFromCache(uid);
+
+    if (user && !user.isDemo && typeof window !== "undefined" && window.FirebaseService && window.FirebaseService.db) {
+      try {
+        // 1. Cek dokumen utama users/{uid} terlebih dahulu (Single Source of Truth)
+        const userDocSnap = await window.FirebaseService.db
+          .collection("users")
+          .doc(user.uid)
+          .get();
+
+        let remoteData = null;
+        if (userDocSnap.exists) {
+          const udata = userDocSnap.data() || {};
+          if (udata.nim || udata.university || udata.major || udata.supervisor || (udata.locations && udata.locations.length)) {
+            const rawLocs = udata.locations || [];
+            const normalizedLocs = this.normalizeLocations(rawLocs);
+
+            remoteData = {
+              name: udata.name || user.displayName || "",
+              nim: udata.nim || "",
+              university: udata.university || "",
+              major: udata.major || "",
+              topic: udata.topic || udata.researchTopic || "",
+              researchTopic: udata.researchTopic || udata.topic || "",
+              supervisor: udata.supervisor || "",
+              supervisorNip: udata.supervisorNip || "",
+              timezone: udata.timezone || "WITA",
+              locations: normalizedLocs,
+              isComplete: Boolean(udata.hasCompletedProfile)
+            };
+
+            // Migrasi otomatis di Firestore jika format berubah dari nested ke flat
+            if (rawLocs.length > 0 && JSON.stringify(rawLocs) !== JSON.stringify(normalizedLocs)) {
+              await window.FirebaseService.db.collection("users").doc(user.uid).set({
+                locations: normalizedLocs,
+                updatedAt: new Date().toISOString()
+              }, { merge: true });
+            }
+          }
+        }
+
+        // 2. Fallback backward-compatibility jika profil tersimpan di subkoleksi meta/profile
+        if (!remoteData) {
+          const docSnap = await window.FirebaseService.db
+            .collection("users")
+            .doc(user.uid)
+            .collection("meta")
+            .doc("profile")
+            .get();
+
+          if (docSnap.exists) {
+            remoteData = docSnap.data();
+            if (remoteData && remoteData.locations) {
+              remoteData.locations = this.normalizeLocations(remoteData.locations);
+            }
+          }
+        }
+
+        if (remoteData) {
+          this.currentProfile = { ...this.defaultProfile, ...remoteData };
+          this.saveToCache(uid);
+        } else if (!this.currentProfile || !this.currentProfile.name) {
+          this.currentProfile = {
+            ...this.defaultProfile,
+            name: user.displayName || "",
+            email: user.email || ""
+          };
+          this.saveToCache(uid);
+        }
+      } catch (err) {
+        console.warn("Gagal membaca profil dari Firestore:", err.message);
+      }
+    }
+
+    if (this.currentProfile && this.currentProfile.locations) {
+      this.currentProfile.locations = this.normalizeLocations(this.currentProfile.locations);
+    }
+
+    return this.currentProfile;
+  },
+
+  loadFromCache(uid) {
+    try {
+      const activeUid = uid || (window.AuthManager && AuthManager.currentUser ? AuthManager.currentUser.uid : null);
+      const key = this.getStorageKey(activeUid);
+      let saved = localStorage.getItem(key);
+      if (!saved && activeUid) {
+        saved = localStorage.getItem(this.STORAGE_KEY);
+      }
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.locations) {
+          parsed.locations = this.normalizeLocations(parsed.locations);
+        }
+        this.currentProfile = { ...this.defaultProfile, ...parsed };
+      } else {
+        this.currentProfile = { ...this.defaultProfile };
+      }
+    } catch (e) {
+      this.currentProfile = { ...this.defaultProfile };
+    }
+  },
+
+  saveToCache(uid) {
+    try {
+      const activeUid = uid || (window.AuthManager && AuthManager.currentUser ? AuthManager.currentUser.uid : null);
+      const key = this.getStorageKey(activeUid);
+      localStorage.setItem(key, JSON.stringify(this.currentProfile));
+      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(this.currentProfile));
+    } catch (e) {
+      console.warn("Gagal menyimpan cache profil:", e);
+    }
+  },
+
+  /**
+   * Auto-Sync Instan ke LocalStorage dan Cloud Firestore
+   * Menjamin Zero Data Loss saat pengguna merefresh halaman
+   */
+  async syncLocationsToStorageAndRemote(user) {
+    const activeUser = user || (typeof window !== "undefined" && window.AuthManager ? window.AuthManager.currentUser : null);
+    const uid = activeUser ? activeUser.uid : null;
+    this.saveToCache(uid);
+
+    if (activeUser && !activeUser.isDemo && typeof window !== "undefined" && window.FirebaseService && window.FirebaseService.db) {
+      try {
+        await window.FirebaseService.db
+          .collection("users")
+          .doc(activeUser.uid)
+          .set({
+            locations: this.currentProfile.locations || [],
+            updatedAt: new Date().toISOString()
+          }, { merge: true });
+      } catch (err) {
+        console.warn("Auto-sync lokasi ke Firestore tertunda:", err.message);
+      }
+    }
+  },
+
+  /**
+   * Simpan profil ke LocalStorage & Firestore (Menyatu di Dokumen Utama Pengguna)
+   */
+  async saveProfile(profileData, user) {
+    const uid = user ? user.uid : null;
+    const isComplete = this.validateCompleteness({
+      ...this.currentProfile,
+      ...profileData
+    });
+    const updated = {
+      ...this.currentProfile,
+      ...profileData,
+      isComplete,
+      updatedAt: new Date().toISOString()
+    };
+
+    if (updated.locations) {
+      updated.locations = this.normalizeLocations(updated.locations);
+    }
+
+    this.currentProfile = updated;
+    this.saveToCache(uid);
+
+    if (user && !user.isDemo && typeof window !== "undefined" && window.FirebaseService && window.FirebaseService.db) {
+      try {
+        // Simpan langsung ke dokumen utama users/{uid} agar schema konsisten di Firestore
+        await window.FirebaseService.db
+          .collection("users")
+          .doc(user.uid)
+          .set({
+            name: updated.name,
+            nim: updated.nim,
+            university: updated.university,
+            major: updated.major,
+            topic: updated.topic || updated.researchTopic,
+            researchTopic: updated.researchTopic || updated.topic,
+            supervisor: updated.supervisor,
+            supervisorNip: updated.supervisorNip || "",
+            timezone: updated.timezone || "WITA",
+            locations: updated.locations || [],
+            hasCompletedProfile: isComplete,
+            updatedAt: updated.updatedAt
+          }, { merge: true });
+
+        // Simpan salinan di meta/profile untuk kompatibilitas data
+        await window.FirebaseService.db
+          .collection("users")
+          .doc(user.uid)
+          .collection("meta")
+          .doc("profile")
+          .set(updated, { merge: true });
+      } catch (err) {
+        console.error("Gagal menyimpan profil ke Firestore:", err);
+      }
+    }
+
+    return this.currentProfile;
+  },
+
+  /**
+   * Cek apakah profil sudah lengkap (Wajib untuk onboarding)
+   */
+  validateCompleteness(p = this.currentProfile) {
+    if (!p) return false;
+    const hasName = String(p.name || "").trim().length > 0;
+    const hasNim = String(p.nim || "").trim().length > 0;
+    const hasUniversity = String(p.university || "").trim().length > 0;
+    const hasSupervisor = String(p.supervisor || "").trim().length > 0;
+    const hasLocations = Array.isArray(p.locations) && p.locations.length > 0;
+
+    return Boolean(hasName && hasNim && hasUniversity && hasSupervisor && hasLocations);
+  },
+
+  isComplete() {
+    return this.validateCompleteness(this.currentProfile);
+  },
+
+  /**
+   * Mendapatkan daftar nama Kabupaten terdaftar dari profil (Array unik)
+   */
+  getRegisteredKabupatens() {
+    if (!this.currentProfile || !Array.isArray(this.currentProfile.locations)) return [];
+    const list = this.currentProfile.locations
+      .map(loc => (loc.kabupaten ? String(loc.kabupaten).trim() : ""))
+      .filter(Boolean);
+    return Array.from(new Set(list));
+  },
+
+  /**
+   * Mendapatkan daftar objek Kecamatan untuk suatu Kabupaten
+   */
+  getRegisteredKecamatans(kabupatenName) {
+    if (!kabupatenName || !this.currentProfile || !Array.isArray(this.currentProfile.locations)) return [];
+    const kabLower = String(kabupatenName).trim().toLowerCase();
+    const matching = this.currentProfile.locations.filter(
+      loc => String(loc.kabupaten || "").trim().toLowerCase() === kabLower
+    );
+    const kecNames = Array.from(new Set(
+      matching.map(loc => (loc.kecamatan ? String(loc.kecamatan).trim() : "")).filter(Boolean)
+    ));
+    return kecNames.map(name => ({ name }));
+  },
+
+  /**
+   * Mendapatkan daftar nama Desa untuk suatu Kabupaten dan Kecamatan
+   */
+  getRegisteredDesas(kabupatenName, kecamatanName) {
+    if (!kabupatenName || !kecamatanName || !this.currentProfile || !Array.isArray(this.currentProfile.locations)) return [];
+    const kabLower = String(kabupatenName).trim().toLowerCase();
+    const kecLower = String(kecamatanName).trim().toLowerCase();
+    const matching = this.currentProfile.locations.filter(
+      loc => String(loc.kabupaten || "").trim().toLowerCase() === kabLower &&
+             String(loc.kecamatan || "").trim().toLowerCase() === kecLower
+    );
+    const desaNames = Array.from(new Set(
+      matching.map(loc => (loc.desa ? String(loc.desa).trim() : "")).filter(Boolean)
+    ));
+    return desaNames;
+  },
+
+  /**
+   * Mendapatkan daftar nama Dusun untuk suatu Desa (Opsional)
+   */
+  getRegisteredDusuns(kabupatenName, kecamatanName, desaName) {
+    if (!kabupatenName || !kecamatanName || !desaName || !this.currentProfile || !Array.isArray(this.currentProfile.locations)) return [];
+    const kabLower = String(kabupatenName).trim().toLowerCase();
+    const kecLower = String(kecamatanName).trim().toLowerCase();
+    const desaLower = String(desaName).trim().toLowerCase();
+    const matching = this.currentProfile.locations.filter(
+      loc => String(loc.kabupaten || "").trim().toLowerCase() === kabLower &&
+             String(loc.kecamatan || "").trim().toLowerCase() === kecLower &&
+             String(loc.desa || "").trim().toLowerCase() === desaLower
+    );
+    const dusunNames = Array.from(new Set(
+      matching.map(loc => (loc.dusun ? String(loc.dusun).trim() : "")).filter(Boolean)
+    ));
+    return dusunNames;
+  },
+
+  /**
+   * Helper Normalisasi Objek Desa (Kompatibilitas Tampilan)
+   */
+  normalizeDesa(desaItem) {
+    if (!desaItem) return { name: "", dusuns: [] };
+    if (typeof desaItem === "string") {
+      return { name: desaItem.trim(), dusuns: [] };
+    }
+    return {
+      name: String(desaItem.name || "").trim(),
+      dusuns: Array.isArray(desaItem.dusuns) ? desaItem.dusuns.map(d => String(d).trim()).filter(Boolean) : []
+    };
+  },
+
+  /**
+   * Tambah Entri Wilayah Lengkap (Flat Normalized 5-Level Schema)
+   * Menyimpan langsung ke Cache dan Cloud Firestore (Zero Data Loss)
+   */
+  async addLocationEntry({ provinsi, kabupaten, kecamatan, desa, dusun }, user) {
+    if (!this.currentProfile) this.currentProfile = { ...this.defaultProfile };
+    if (!Array.isArray(this.currentProfile.locations)) this.currentProfile.locations = [];
+
+    const provClean = String(provinsi || "Sulawesi Selatan").trim();
+    const kabClean = String(kabupaten || "").trim();
+    const kecClean = String(kecamatan || "").trim();
+    const desaClean = String(desa || "").trim();
+    const dusunClean = String(dusun || "").trim();
+
+    if (!kabClean) return false;
+
+    // 1. Cek apakah record persis sama sudah ada
+    const existingExact = this.currentProfile.locations.find(l =>
+      String(l.kabupaten || "").toLowerCase() === kabClean.toLowerCase() &&
+      String(l.kecamatan || "").toLowerCase() === kecClean.toLowerCase() &&
+      String(l.desa || "").toLowerCase() === desaClean.toLowerCase() &&
+      String(l.dusun || "").toLowerCase() === dusunClean.toLowerCase()
+    );
+
+    if (existingExact) {
+      if (provClean && (!existingExact.provinsi || existingExact.provinsi === "Provinsi Riset")) {
+        existingExact.provinsi = provClean;
+      }
+      await this.syncLocationsToStorageAndRemote(user);
+      return true;
+    }
+
+    // 2. Jika menambah dusun, dan sudah ada entri desa tanpa dusun (dusun: ""), gunakan entri tersebut
+    if (dusunClean) {
+      const blankDusunEntry = this.currentProfile.locations.find(l =>
+        String(l.kabupaten || "").toLowerCase() === kabClean.toLowerCase() &&
+        String(l.kecamatan || "").toLowerCase() === kecClean.toLowerCase() &&
+        String(l.desa || "").toLowerCase() === desaClean.toLowerCase() &&
+        !String(l.dusun || "").trim()
+      );
+      if (blankDusunEntry) {
+        blankDusunEntry.dusun = dusunClean;
+        if (provClean) blankDusunEntry.provinsi = provClean;
+        await this.syncLocationsToStorageAndRemote(user);
+        return true;
+      }
+    }
+
+    // 3. Jika menambah kecamatan/desa ke placeholder kabupaten kosong
+    if (kecClean) {
+      const blankKecEntry = this.currentProfile.locations.find(l =>
+        String(l.kabupaten || "").toLowerCase() === kabClean.toLowerCase() &&
+        !String(l.kecamatan || "").trim() &&
+        !String(l.desa || "").trim() &&
+        !String(l.dusun || "").trim()
+      );
+      if (blankKecEntry) {
+        blankKecEntry.kecamatan = kecClean;
+        blankKecEntry.desa = desaClean;
+        blankKecEntry.dusun = dusunClean;
+        if (provClean) blankKecEntry.provinsi = provClean;
+        await this.syncLocationsToStorageAndRemote(user);
+        return true;
+      }
+    }
+
+    // 4. Jika menambah desa ke placeholder kecamatan kosong
+    if (desaClean) {
+      const blankDesaEntry = this.currentProfile.locations.find(l =>
+        String(l.kabupaten || "").toLowerCase() === kabClean.toLowerCase() &&
+        String(l.kecamatan || "").toLowerCase() === kecClean.toLowerCase() &&
+        !String(l.desa || "").trim() &&
+        !String(l.dusun || "").trim()
+      );
+      if (blankDesaEntry) {
+        blankDesaEntry.desa = desaClean;
+        blankDesaEntry.dusun = dusunClean;
+        if (provClean) blankDesaEntry.provinsi = provClean;
+        await this.syncLocationsToStorageAndRemote(user);
+        return true;
+      }
+    }
+
+    // 5. Tambah record baru
+    const newEntry = {
+      id: `loc_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
+      provinsi: provClean,
+      kabupaten: kabClean,
+      kecamatan: kecClean,
+      desa: desaClean,
+      dusun: dusunClean
+    };
+
+    this.currentProfile.locations.push(newEntry);
+    await this.syncLocationsToStorageAndRemote(user);
+    return true;
+  },
+
+  /**
+   * Helper Manipulasi Hirarki Wilayah Bertingkat
+   */
+  async addKabupaten(provinsi, kabupatenName, user) {
+    return await this.addLocationEntry({ provinsi, kabupaten: kabupatenName, kecamatan: "", desa: "", dusun: "" }, user);
+  },
+
+  async removeKabupaten(indexOrName, user) {
+    if (!this.currentProfile || !Array.isArray(this.currentProfile.locations)) return;
+    let targetKab = "";
+    if (typeof indexOrName === "number") {
+      const tree = this.getTreeLocations();
+      targetKab = tree[indexOrName] ? tree[indexOrName].kabupaten : "";
+    } else {
+      targetKab = String(indexOrName || "");
+    }
+
+    if (!targetKab) return;
+
+    this.currentProfile.locations = this.currentProfile.locations.filter(
+      l => String(l.kabupaten || "").trim().toLowerCase() !== targetKab.trim().toLowerCase()
+    );
+
+    await this.syncLocationsToStorageAndRemote(user);
+  },
+
+  async addKecamatan(kabIndexOrName, kecName, user) {
+    const kecClean = String(kecName || "").trim();
+    if (!kecClean) return;
+
+    let targetKab = "";
+    let targetProv = "Sulawesi Selatan";
+    if (typeof kabIndexOrName === "number") {
+      const tree = this.getTreeLocations();
+      const kabObj = tree[kabIndexOrName];
+      if (kabObj) {
+        targetKab = kabObj.kabupaten;
+        targetProv = kabObj.provinsi || targetProv;
+      }
+    } else {
+      targetKab = String(kabIndexOrName || "");
+    }
+
+    if (!targetKab) return;
+
+    await this.addLocationEntry({
+      provinsi: targetProv,
+      kabupaten: targetKab,
+      kecamatan: kecClean,
+      desa: "",
+      dusun: ""
+    }, user);
+  },
+
+  async removeKecamatan(kabIndexOrName, kecIndexOrName, user) {
+    if (!this.currentProfile || !Array.isArray(this.currentProfile.locations)) return;
+
+    let targetKab = "";
+    let targetKec = "";
+    let targetProv = "Sulawesi Selatan";
+
+    if (typeof kabIndexOrName === "number") {
+      const tree = this.getTreeLocations();
+      const kabObj = tree[kabIndexOrName];
+      if (kabObj) {
+        targetKab = kabObj.kabupaten;
+        targetProv = kabObj.provinsi || targetProv;
+        if (typeof kecIndexOrName === "number" && kabObj.kecamatans && kabObj.kecamatans[kecIndexOrName]) {
+          targetKec = kabObj.kecamatans[kecIndexOrName].name;
+        }
+      }
+    } else {
+      targetKab = String(kabIndexOrName || "");
+      targetKec = String(kecIndexOrName || "");
+    }
+
+    if (!targetKab || !targetKec) return;
+
+    // Hapus seluruh entri dengan kec tersebut
+    this.currentProfile.locations = this.currentProfile.locations.filter(
+      l => !(
+        String(l.kabupaten || "").trim().toLowerCase() === targetKab.trim().toLowerCase() &&
+        String(l.kecamatan || "").trim().toLowerCase() === targetKec.trim().toLowerCase()
+      )
+    );
+
+    // Jika tidak ada lagi sisa entri untuk kabupaten tersebut, buatkan placeholder kabupaten agar tidak hilang
+    const remainingForKab = this.currentProfile.locations.filter(
+      l => String(l.kabupaten || "").trim().toLowerCase() === targetKab.trim().toLowerCase()
+    );
+    if (remainingForKab.length === 0) {
+      this.currentProfile.locations.push({
+        id: `loc_${Date.now()}_holder`,
+        provinsi: targetProv,
+        kabupaten: targetKab,
+        kecamatan: "",
+        desa: "",
+        dusun: ""
+      });
+    }
+
+    await this.syncLocationsToStorageAndRemote(user);
+  },
+
+  async addDesa(kabIndexOrName, kecIndexOrName, desaName, dusunName = "", user) {
+    const desaClean = String(desaName || "").trim();
+    if (!desaClean) return;
+
+    let targetKab = "";
+    let targetKec = "";
+    let targetProv = "Sulawesi Selatan";
+
+    if (typeof kabIndexOrName === "number") {
+      const tree = this.getTreeLocations();
+      const kabObj = tree[kabIndexOrName];
+      if (kabObj) {
+        targetKab = kabObj.kabupaten;
+        targetProv = kabObj.provinsi || targetProv;
+        if (typeof kecIndexOrName === "number" && kabObj.kecamatans && kabObj.kecamatans[kecIndexOrName]) {
+          targetKec = kabObj.kecamatans[kecIndexOrName].name;
+        }
+      }
+    } else {
+      targetKab = String(kabIndexOrName || "");
+      targetKec = String(kecIndexOrName || "");
+    }
+
+    if (!targetKab || !targetKec) return;
+
+    await this.addLocationEntry({
+      provinsi: targetProv,
+      kabupaten: targetKab,
+      kecamatan: targetKec,
+      desa: desaClean,
+      dusun: dusunName
+    }, user);
+  },
+
+  async removeDesa(kabIndexOrName, kecIndexOrName, desaIndexOrName, user) {
+    if (!this.currentProfile || !Array.isArray(this.currentProfile.locations)) return;
+
+    let targetKab = "";
+    let targetKec = "";
+    let targetDesa = "";
+    let targetProv = "Sulawesi Selatan";
+
+    if (typeof kabIndexOrName === "number") {
+      const tree = this.getTreeLocations();
+      const kabObj = tree[kabIndexOrName];
+      if (kabObj) {
+        targetKab = kabObj.kabupaten;
+        targetProv = kabObj.provinsi || targetProv;
+        if (typeof kecIndexOrName === "number" && kabObj.kecamatans && kabObj.kecamatans[kecIndexOrName]) {
+          const kecObj = kabObj.kecamatans[kecIndexOrName];
+          targetKec = kecObj.name;
+          if (typeof desaIndexOrName === "number" && kecObj.desas && kecObj.desas[desaIndexOrName]) {
+            targetDesa = this.normalizeDesa(kecObj.desas[desaIndexOrName]).name;
+          }
+        }
+      }
+    } else {
+      targetKab = String(kabIndexOrName || "");
+      targetKec = String(kecIndexOrName || "");
+      targetDesa = String(desaIndexOrName || "");
+    }
+
+    if (!targetKab || !targetKec || !targetDesa) return;
+
+    // Hapus seluruh entri dengan desa tersebut
+    this.currentProfile.locations = this.currentProfile.locations.filter(
+      l => !(
+        String(l.kabupaten || "").trim().toLowerCase() === targetKab.trim().toLowerCase() &&
+        String(l.kecamatan || "").trim().toLowerCase() === targetKec.trim().toLowerCase() &&
+        String(l.desa || "").trim().toLowerCase() === targetDesa.trim().toLowerCase()
+      )
+    );
+
+    // Jika tidak ada lagi sisa entri untuk kecamatan tersebut, buat placeholder kecamatan
+    const remainingForKec = this.currentProfile.locations.filter(
+      l => String(l.kabupaten || "").trim().toLowerCase() === targetKab.trim().toLowerCase() &&
+           String(l.kecamatan || "").trim().toLowerCase() === targetKec.trim().toLowerCase()
+    );
+    if (remainingForKec.length === 0) {
+      this.currentProfile.locations.push({
+        id: `loc_${Date.now()}_holder`,
+        provinsi: targetProv,
+        kabupaten: targetKab,
+        kecamatan: targetKec,
+        desa: "",
+        dusun: ""
+      });
+    }
+
+    await this.syncLocationsToStorageAndRemote(user);
+  },
+
+  async addDusun(kabIndexOrName, kecIndexOrName, desaIndexOrName, dusunName, user) {
+    const dusunClean = String(dusunName || "").trim();
+    if (!dusunClean) return;
+
+    let targetKab = "";
+    let targetKec = "";
+    let targetDesa = "";
+    let targetProv = "Sulawesi Selatan";
+
+    if (typeof kabIndexOrName === "number") {
+      const tree = this.getTreeLocations();
+      const kabObj = tree[kabIndexOrName];
+      if (kabObj) {
+        targetKab = kabObj.kabupaten;
+        targetProv = kabObj.provinsi || targetProv;
+        if (typeof kecIndexOrName === "number" && kabObj.kecamatans && kabObj.kecamatans[kecIndexOrName]) {
+          const kecObj = kabObj.kecamatans[kecIndexOrName];
+          targetKec = kecObj.name;
+          if (typeof desaIndexOrName === "number" && kecObj.desas && kecObj.desas[desaIndexOrName]) {
+            targetDesa = this.normalizeDesa(kecObj.desas[desaIndexOrName]).name;
+          }
+        }
+      }
+    } else {
+      targetKab = String(kabIndexOrName || "");
+      targetKec = String(kecIndexOrName || "");
+      targetDesa = String(desaIndexOrName || "");
+    }
+
+    if (!targetKab || !targetKec || !targetDesa) return;
+
+    await this.addLocationEntry({
+      provinsi: targetProv,
+      kabupaten: targetKab,
+      kecamatan: targetKec,
+      desa: targetDesa,
+      dusun: dusunClean
+    }, user);
+  },
+
+  async removeDusun(kabIndexOrName, kecIndexOrName, desaIndexOrName, dusunIndexOrName, user) {
+    if (!this.currentProfile || !Array.isArray(this.currentProfile.locations)) return;
+
+    let targetKab = "";
+    let targetKec = "";
+    let targetDesa = "";
+    let targetDusun = "";
+
+    if (typeof kabIndexOrName === "number") {
+      const tree = this.getTreeLocations();
+      const kabObj = tree[kabIndexOrName];
+      if (kabObj) {
+        targetKab = kabObj.kabupaten;
+        if (typeof kecIndexOrName === "number" && kabObj.kecamatans && kabObj.kecamatans[kecIndexOrName]) {
+          const kecObj = kabObj.kecamatans[kecIndexOrName];
+          targetKec = kecObj.name;
+          if (typeof desaIndexOrName === "number" && kecObj.desas && kecObj.desas[desaIndexOrName]) {
+            const desaObj = this.normalizeDesa(kecObj.desas[desaIndexOrName]);
+            targetDesa = desaObj.name;
+            if (typeof dusunIndexOrName === "number" && desaObj.dusuns && desaObj.dusuns[dusunIndexOrName]) {
+              targetDusun = desaObj.dusuns[dusunIndexOrName];
+            }
+          }
+        }
+      }
+    } else {
+      targetKab = String(kabIndexOrName || "");
+      targetKec = String(kecIndexOrName || "");
+      targetDesa = String(desaIndexOrName || "");
+      targetDusun = String(dusunIndexOrName || "");
+    }
+
+    if (!targetKab || !targetKec || !targetDesa || !targetDusun) return;
+
+    const matchingDesaEntries = this.currentProfile.locations.filter(
+      l => String(l.kabupaten || "").trim().toLowerCase() === targetKab.trim().toLowerCase() &&
+           String(l.kecamatan || "").trim().toLowerCase() === targetKec.trim().toLowerCase() &&
+           String(l.desa || "").trim().toLowerCase() === targetDesa.trim().toLowerCase()
+    );
+
+    if (matchingDesaEntries.length > 1) {
+      // Ada beberapa dusun, hapus spesifik entri dusun ini
+      this.currentProfile.locations = this.currentProfile.locations.filter(
+        l => !(
+          String(l.kabupaten || "").trim().toLowerCase() === targetKab.trim().toLowerCase() &&
+          String(l.kecamatan || "").trim().toLowerCase() === targetKec.trim().toLowerCase() &&
+          String(l.desa || "").trim().toLowerCase() === targetDesa.trim().toLowerCase() &&
+          String(l.dusun || "").trim().toLowerCase() === targetDusun.trim().toLowerCase()
+        )
+      );
+    } else if (matchingDesaEntries.length === 1) {
+      // Hanya 1 entri untuk desa ini, ubah dusun menjadi string kosong agar desa tidak ikut terhapus
+      matchingDesaEntries[0].dusun = "";
+    }
+
+    await this.syncLocationsToStorageAndRemote(user);
+  },
+
+  /**
+   * Render UI Builder Hirarki Wilayah ke Kontainer DOM
+   */
+  renderLocationTreeBuilder(container) {
+    if (!container) return;
+    container.innerHTML = "";
+
+    const locations = this.getTreeLocations();
+
+    if (locations.length === 0) {
+      container.innerHTML = `
+        <div style="text-align: center; padding: 24px 16px; background: #f8fafc; border: 1px solid var(--color-slate-200); border-radius: var(--radius-md); color: var(--color-slate-500); font-size: 0.84rem;">
+          <p>Belum ada wilayah penelitian terdaftar.</p>
+          <p style="margin-top: 4px; font-weight: 600; color: var(--color-primary-dark);">Pilih tombol <strong>"+ Tambah Wilayah Penelitian"</strong> untuk mendaftarkan hirarki lokasi riset Anda.</p>
+        </div>
+      `;
+      return;
+    }
+
+    locations.forEach((kab, kabIndex) => {
+      const kabCard = document.createElement("div");
+      kabCard.className = "tree-kab-card";
+
+      // 1 & 2: Header Provinsi & Kabupaten
+      const kabHeader = document.createElement("div");
+      kabHeader.className = "tree-kab-header";
+      kabHeader.innerHTML = `
+        <div class="tree-kab-name">
+          <div style="font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-slate-500); font-weight: 600; margin-bottom: 2px;">
+            Provinsi ${kab.provinsi || "Sulawesi Selatan"}
+          </div>
+          <span style="font-size: 0.95rem; font-weight: 750; color: var(--color-slate-800);">
+            ${kab.kabupaten.toLowerCase().startsWith("kab") || kab.kabupaten.toLowerCase().startsWith("kota") ? kab.kabupaten : `Kab. ${kab.kabupaten}`}
+          </span>
+        </div>
+        <div class="tree-header-actions" style="display: flex; gap: 6px; align-items: center;">
+          <button type="button" class="btn btn-light btn-sm btn-add-kec-action" data-kab-idx="${kabIndex}" title="Tambah Kecamatan">
+            + Kecamatan
+          </button>
+          <button type="button" class="btn-icon btn-remove-kab-action" data-kab-idx="${kabIndex}" data-kab-name="${kab.kabupaten}" title="Hapus Kabupaten Ini" style="color: var(--color-danger); width: 28px; height: 28px; font-size: 18px;">
+            &times;
+          </button>
+        </div>
+      `;
+      kabCard.appendChild(kabHeader);
+
+      // 3: List Kecamatan
+      const kecList = document.createElement("div");
+      kecList.className = "tree-kec-list";
+
+      const kecamatans = Array.isArray(kab.kecamatans) ? kab.kecamatans : [];
+      if (kecamatans.length === 0) {
+        kecList.innerHTML = `<small style="color: var(--color-slate-400); font-style: italic; display: block; padding: 6px 0;">Belum ada kecamatan. Pilih "+ Kecamatan" untuk mendaftarkan.</small>`;
+      } else {
+        kecamatans.forEach((kec, kecIndex) => {
+          const kecCard = document.createElement("div");
+          kecCard.className = "tree-kec-card";
+
+          const kecHeader = document.createElement("div");
+          kecHeader.className = "tree-kec-header";
+          kecHeader.innerHTML = `
+            <div class="tree-kec-info" style="display: flex; align-items: center; gap: 6px;">
+              <span class="tree-kec-badge">Kecamatan</span>
+              <strong style="color: var(--color-slate-800); font-size: 0.88rem;">${kec.name}</strong>
+            </div>
+            <div class="tree-header-actions" style="display: flex; gap: 6px; align-items: center;">
+              <button type="button" class="btn btn-light btn-sm btn-add-desa-action" data-kab-idx="${kabIndex}" data-kec-idx="${kecIndex}" style="font-size: 0.75rem; padding: 3px 8px;">
+                + Desa/Kelurahan
+              </button>
+              <button type="button" class="btn-icon btn-remove-kec-action" data-kab-idx="${kabIndex}" data-kec-idx="${kecIndex}" data-kec-name="${kec.name}" title="Hapus Kecamatan Ini" style="color: var(--color-danger); width: 24px; height: 24px; font-size: 16px;">
+                &times;
+              </button>
+            </div>
+          `;
+          kecCard.appendChild(kecHeader);
+
+          // 4 & 5: Daftar Desa & Dusun (Opsional)
+          const desaWrapper = document.createElement("div");
+          desaWrapper.className = "tree-desa-wrapper";
+
+          const desas = Array.isArray(kec.desas) ? kec.desas : [];
+          if (desas.length === 0) {
+            desaWrapper.innerHTML = `<small style="color: var(--color-slate-400); font-style: italic; font-size: 0.76rem;">Belum ada desa/kelurahan.</small>`;
+          } else {
+            desas.forEach((dItem, desaIndex) => {
+              const desaObj = this.normalizeDesa(dItem);
+              const desaRow = document.createElement("div");
+              desaRow.className = "tree-desa-row";
+
+              const dusuns = Array.isArray(desaObj.dusuns) ? desaObj.dusuns : [];
+              const dusunBadgesHtml = dusuns.map((dsn, dsnIndex) => `
+                <span class="dusun-tag">
+                  <span>Dsn. ${dsn}</span>
+                  <button type="button" class="btn-remove-dusun-action" data-kab-idx="${kabIndex}" data-kec-idx="${kecIndex}" data-desa-idx="${desaIndex}" data-dusun-idx="${dsnIndex}" title="Hapus Dusun">&times;</button>
+                </span>
+              `).join("");
+
+              desaRow.innerHTML = `
+                <div class="tree-desa-main">
+                  <div class="tree-desa-label">
+                    <span class="desa-name-text">Desa/Kel. <strong>${desaObj.name}</strong></span>
+                    <div class="tree-desa-actions" style="display: flex; gap: 4px; align-items: center;">
+                      <button type="button" class="btn-add-dusun-action btn-link-action" data-kab-idx="${kabIndex}" data-kec-idx="${kecIndex}" data-desa-idx="${desaIndex}" style="font-size: 0.72rem;">
+                        + Dusun
+                      </button>
+                      <button type="button" class="btn-icon btn-remove-desa-action" data-kab-idx="${kabIndex}" data-kec-idx="${kecIndex}" data-desa-idx="${desaIndex}" data-desa-name="${desaObj.name}" title="Hapus Desa Ini" style="color: var(--color-danger); width: 20px; height: 20px; font-size: 15px;">
+                        &times;
+                      </button>
+                    </div>
+                  </div>
+                  ${dusuns.length > 0 ? `
+                    <div class="tree-dusun-list">
+                      <span class="dusun-indicator-label">Dusun/Lingk:</span>
+                      ${dusunBadgesHtml}
+                    </div>
+                  ` : ""}
+                </div>
+              `;
+              desaWrapper.appendChild(desaRow);
+            });
+          }
+
+          kecCard.appendChild(desaWrapper);
+          kecList.appendChild(kecCard);
+        });
+      }
+
+      kabCard.appendChild(kecList);
+      container.appendChild(kabCard);
+    });
+  }
+};
+
+window.ProfileManager = ProfileManager;

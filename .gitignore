@@ -1,0 +1,15 @@
+# Environment Variables & Privacy Keys
+.env
+.env.local
+.env.*.local
+*.env
+!*.env.example
+
+# Dependencies
+node_modules/
+
+# Vercel
+.vercel/
+
+# Logs
+*.log
