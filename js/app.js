@@ -1938,7 +1938,15 @@
             method: "payment_link"
           })
         });
-        const data = await resp.json();
+        let data;
+        try {
+          data = await resp.json();
+        } catch (jsonErr) {
+          throw new Error(`Server tidak mengembalikan respons yang valid (HTTP ${resp.status})`);
+        }
+        if (!resp.ok || (data && data.success === false)) {
+          throw new Error((data && data.message) || `Gagal menyiapkan pembayaran (HTTP ${resp.status})`);
+        }
         const paymentUrl = data.payment_url || (data.data && data.data.payment_link) || "https://app.pakasir.com/pay-v2";
         const orderId = data.order_id || (data.data && data.data.order_id) || `LB-${Date.now()}`;
         const txnId = data.txn_id || (data.data && data.data.txn_id) || "";
@@ -2050,9 +2058,14 @@
         })
       });
 
-      const data = await resp.json();
-      if (!data.success) {
-        throw new Error(data.message || `Gagal membuat tagihan ${method} ke Pakasir.`);
+      let data;
+      try {
+        data = await resp.json();
+      } catch (jsonErr) {
+        throw new Error(`Server tidak mengembalikan respons yang valid (HTTP ${resp.status})`);
+      }
+      if (!resp.ok || !data.success) {
+        throw new Error((data && data.message) || `Gagal membuat tagihan ${method} ke Pakasir (HTTP ${resp.status}).`);
       }
 
       const orderId = data.order_id || (data.data && data.data.order_id) || data.orderId || `LB-${Date.now()}`;
@@ -2187,8 +2200,12 @@
         order_id: state.currentPaymentOrder.orderId
       });
 
-      const resp = await fetch(`/api/payment/status?${q.toString()}`);
-      const data = await resp.json();
+      let data;
+      try {
+        data = await resp.json();
+      } catch (jsonErr) {
+        throw new Error(`Pengecekan status gagal: Server tidak mengembalikan respons yang valid (HTTP ${resp.status})`);
+      }
 
       if (data.is_sandbox !== undefined) {
         if (state.currentPaymentOrder) {
@@ -2261,9 +2278,14 @@
         })
       });
 
-      const res = await resp.json();
-      if (!res.success) {
-        throw new Error(res.message || "Gagal memproses simulasi di server Pakasir.");
+      let res;
+      try {
+        res = await resp.json();
+      } catch (jsonErr) {
+        throw new Error(`Simulasi gagal: Server tidak mengembalikan respons yang valid (HTTP ${resp.status})`);
+      }
+      if (!resp.ok || !res.success) {
+        throw new Error((res && res.message) || `Gagal memproses simulasi di server Pakasir (HTTP ${resp.status}).`);
       }
 
       showToast("Server Pakasir menyetujui transaksi simulasi. Menunggu 4 detik untuk verifikasi status...", "info");
