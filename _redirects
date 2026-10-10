@@ -1,2 +1,2 @@
-/api/*   /api/:splat   200
-/*       /index.html   200
+# Cloudflare Pages Native Routing
+# SPA fallback ditangani secara native melalui 200.html

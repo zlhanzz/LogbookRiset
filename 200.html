@@ -1,0 +1,1739 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#064e3b">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>LogbookRiset.id - Sistem Otomasi Logbook Penelitian Lapangan</title>
+  
+  <!-- Font Google Plus Jakarta Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Google Firebase SDK (Compat v10 Client-Side) -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
+
+  <!-- FileSaver.js & docx.js untuk Ekspor Word Client-Side (Lokal Vendor dengan Fallback CDN) -->
+  <script src="js/vendor/FileSaver.min.js"></script>
+  <script src="js/vendor/docx.umd.js"></script>
+  <script>
+    if (typeof window.saveAs === "undefined") {
+      document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"><\/script>');
+    }
+    if (typeof window.docx === "undefined") {
+      document.write('<script src="https://unpkg.com/docx@8.5.0/build/index.umd.js"><\/script>');
+    }
+  </script>
+  
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="css/style.css?v=20261010_53">
+</head>
+<body>
+  <!-- Gerbang Pemuatan Awal Sistem (Mencegah Auth Flash & Glitch Rute) -->
+  <div id="appInitialSplash" class="app-initial-splash">
+    <div class="splash-spinner"></div>
+    <span class="splash-text">Memuat sesi riset...</span>
+  </div>
+
+  <!-- HEADER / APP BAR -->
+  <header class="app-header">
+    <div class="header-container">
+      <div class="brand">
+        <div class="brand-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+          </svg>
+        </div>
+        <div>
+          <h1 class="brand-title">LogbookRiset.id</h1>
+          <p class="brand-subtitle" id="headerSubtitle">Pencatatan Aktivitas Penelitian Lapangan</p>
+        </div>
+      </div>
+      
+      <!-- Navigasi Pengunjung (Belum Login) -->
+      <div id="guestHeaderActions" class="header-actions">
+        <button id="btnHeaderLoginPrompt" class="btn btn-primary btn-sm">
+          <span>Masuk</span>
+        </button>
+      </div>
+
+      <!-- Navigasi Pengguna Terotentikasi (Sudah Login) -->
+      <div id="userHeaderActions" class="header-actions hidden">
+        <!-- Badge Status Paket Langganan 3 Bulan -->
+        <button id="btnSubscriptionBadge" class="badge-plan pro" title="Status Akses Langganan">
+          <span class="badge-plan-dot"></span>
+          <span id="planBadgeText">Langganan Aktif (90 hari)</span>
+        </button>
+
+        <!-- Tombol Profil Riset Pengguna (Avatar Google / Fallback Inisial - Standar Industri) -->
+        <button id="btnOpenProfileModal" class="header-user-btn" title="Kelola Profil dan Wilayah Riset" aria-label="Profil Peneliti">
+          <div class="header-avatar-wrapper">
+            <img id="headerUserAvatarImg" class="header-avatar-img hidden" src="" alt="Foto Profil" referrerpolicy="no-referrer">
+            <span id="headerUserAvatarInitials" class="header-avatar-initials">U</span>
+          </div>
+          <div class="header-user-info">
+            <span id="headerUserNameText" class="header-user-name">Profil Riset</span>
+            <span class="header-user-role">Peneliti</span>
+          </div>
+          <svg class="header-user-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+        </button>
+
+        <!-- Tombol Keluar (Logout) -->
+        <button id="btnSignOutTop" class="btn-icon header-logout-btn" title="Keluar Akun" aria-label="Keluar">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+            <polyline points="16 17 21 12 16 7"></polyline>
+            <line x1="21" y1="12" x2="9" y2="12"></line>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ======================================================== -->
+  <!-- 1. HALAMAN LOGIN KHUSUS (DEDICATED AUTH SCREEN - GUEST)  -->
+  <!-- ======================================================== -->
+  <section id="viewLoginScreen" class="login-view-wrapper hidden">
+    <div class="login-card-container">
+      <!-- Sisi Kiri: Informasi Sistem -->
+      <div class="login-brand-panel">
+        <h2 class="login-hero-title">Sistem Logbook Penelitian Lapangan</h2>
+        <p class="login-hero-desc">
+          Pencatatan aktivitas observasi dan wawancara, pencadangan rekaman suara &amp; video di cloud, dokumentasi foto koordinat, dan rekapitulasi data ke format dokumen Word (.docx).
+        </p>
+
+        <div class="login-features-list">
+          <div class="login-feature-row">
+            <span class="feat-dot">•</span>
+            <span>Ekspor tabel berformat Word (.docx) dengan kop dan lembar pengesahan pembimbing</span>
+          </div>
+          <div class="login-feature-row">
+            <span class="feat-dot">•</span>
+            <span>Dokumentasi foto lapangan terintegrasi koordinat dan catatan responden</span>
+          </div>
+          <div class="login-feature-row">
+            <span class="feat-dot">•</span>
+            <span>Pencadangan rekaman suara dan video wawancara di cloud terenkripsi, tersusun rapi per logbook aktivitas</span>
+          </div>
+          <div class="login-feature-row">
+            <span class="feat-dot">•</span>
+            <span>Dukungan multi-wilayah administratif dan pilihan zona waktu riset (WIB, WITA, WIT)</span>
+          </div>
+          <div class="login-feature-row">
+            <span class="feat-dot">•</span>
+            <span>Kategori kegiatan tersimpan untuk mempermudah pencatatan berkala</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sisi Kanan: Form Login & Registrasi -->
+      <div class="login-form-panel">
+        <div class="auth-box-header">
+          <h3 class="auth-box-title" id="authBoxTitle">Masuk ke Akun</h3>
+          <p class="auth-box-subtitle" id="authBoxSubtitle">Kelola catatan aktivitas penelitian Anda</p>
+        </div>
+
+        <!-- Tombol Google Sign-In 1-Klik -->
+        <button type="button" class="btn-google-auth" id="btnLoginGooglePage">
+          <svg width="20" height="20" viewBox="0 0 24 24">
+            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+          </svg>
+          <span>Masuk dengan Google</span>
+        </button>
+
+        <div class="auth-divider">
+          <span>atau gunakan Email</span>
+        </div>
+
+        <!-- Tab Switcher: Masuk vs Daftar Baru -->
+        <div class="auth-tab-switch">
+          <button type="button" class="tab-auth-btn active" id="tabBtnLogin">Masuk</button>
+          <button type="button" class="tab-auth-btn" id="tabBtnRegister">Daftar</button>
+        </div>
+
+        <!-- Form Email & Password -->
+        <form id="formEmailAuth">
+          <div class="form-group hidden" id="groupRegisterName">
+            <label for="authNameInput" class="form-label required">Nama Lengkap Mahasiswa</label>
+            <input type="text" id="authNameInput" class="form-control" placeholder="Nama lengkap Anda">
+          </div>
+
+          <div class="form-group">
+            <label for="authEmailInput" class="form-label required">Alamat Email</label>
+            <input type="email" id="authEmailInput" class="form-control" placeholder="nama@student.ac.id" required>
+          </div>
+
+          <div class="form-group">
+            <label for="authPasswordInput" class="form-label required">Kata Sandi</label>
+            <input type="password" id="authPasswordInput" class="form-control" placeholder="Minimal 6 karakter" required>
+          </div>
+
+          <div class="form-group hidden" id="groupRegisterPasswordConfirm">
+            <label for="authPasswordConfirmInput" class="form-label required">Konfirmasi Kata Sandi</label>
+            <input type="password" id="authPasswordConfirmInput" class="form-control" placeholder="Ulangi kata sandi Anda">
+          </div>
+
+          <div class="auth-aux-row" id="linkForgotPasswordArea">
+            <button type="button" class="btn-link-aux" id="btnForgotPassword">Lupa kata sandi?</button>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-block" id="btnSubmitAuthForm">
+            <span id="btnSubmitAuthText">Masuk Sekarang</span>
+            <span class="spinner hidden" id="spinnerAuth"></span>
+          </button>
+        </form>
+
+        <!-- Area Informasi Verifikasi Email Auth -->
+        <div id="authNoticeBox" class="auth-notice-box hidden">
+          <p id="authNoticeText"></p>
+          <div id="authNoticeActions" class="auth-notice-actions hidden">
+            <button type="button" class="btn btn-sm btn-light" id="btnResendVerificationEmail">Kirim Ulang Email Verifikasi</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2. HALAMAN DEDIKASI VERIFIKASI EMAIL (AUTH GATE STANDAR INDUSTRI) -->
+  <section id="viewVerifyEmail" class="login-view-wrapper hidden">
+    <div class="verify-card-container">
+      <div class="verify-card-header">
+        <div class="verify-icon-box" aria-hidden="true">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+            <polyline points="22,6 12,13 2,6"></polyline>
+          </svg>
+        </div>
+        <h2 class="verify-title">Verifikasi Alamat Email</h2>
+        <p class="verify-subtitle">Untuk menjaga integritas dan keamanan data penelitian lapangan Anda, akun harus diverifikasi sebelum dapat mengakses sistem.</p>
+      </div>
+
+      <div class="verify-email-display-box">
+        <span class="verify-email-label">Tautan verifikasi telah dikirimkan ke:</span>
+        <span class="verify-email-value" id="verifyTargetEmailText">mahasiswa@domain.ac.id</span>
+      </div>
+
+      <div class="verify-instruction-box">
+        <div class="verify-step-item">
+          <span class="verify-step-num">1</span>
+          <span>Buka kotak masuk (inbox) atau folder spam pada email Anda.</span>
+        </div>
+        <div class="verify-step-item">
+          <span class="verify-step-num">2</span>
+          <span>Klik tautan konfirmasi verifikasi yang dikirimkan oleh sistem.</span>
+        </div>
+        <div class="verify-step-item">
+          <span class="verify-step-num">3</span>
+          <span>Setelah selesai mengklik tautan, klik tombol konfirmasi di bawah ini untuk membuka akses dashboard.</span>
+        </div>
+      </div>
+
+      <div class="verify-actions-stack">
+        <button type="button" class="btn btn-primary btn-block" id="btnConfirmEmailVerified">
+          <span>Saya Sudah Verifikasi</span>
+          <span class="spinner hidden" id="spinnerCheckVerify"></span>
+        </button>
+
+        <div class="verify-secondary-actions">
+          <button type="button" class="btn btn-outline-neutral" id="btnResendEmailVerifyPage">
+            <span id="btnResendVerifyText">Kirim Ulang Email Verifikasi</span>
+          </button>
+          <button type="button" class="btn btn-ghost" id="btnSignOutFromVerifyPage">
+            <span>Keluar / Ganti Akun</span>
+          </button>
+        </div>
+      </div>
+
+      <p class="verify-footer-note">
+        Belum menerima email? Periksa folder Spam atau Promosi. Tombol kirim ulang dapat digunakan kembali setelah masa jeda.
+      </p>
+    </div>
+  </section>
+
+  <!-- 3. MAIN APPLICATION VIEW (SETELAH PENGGUNA TERVERIFIKASI) -->
+  <main id="viewMainApp" class="app-container hidden">
+    <!-- BANNER VERIFIKASI EMAIL (JIKA BELUM DIVERIFIKASI) -->
+    <div id="emailVerificationBanner" class="email-verification-banner hidden">
+      <div class="email-verification-content">
+        <span class="verification-badge">Verifikasi Email</span>
+        <span class="verification-text">
+          Alamat email Anda (<strong id="userVerificationEmailText"></strong>) belum diverifikasi. Silakan periksa kotak masuk atau spam.
+        </span>
+      </div>
+      <div class="email-verification-actions">
+        <button type="button" class="btn btn-sm btn-light" id="btnCheckVerificationStatus">Cek Status</button>
+        <button type="button" class="btn btn-sm btn-outline-neutral" id="btnResendVerificationDashboard">Kirim Ulang</button>
+      </div>
+    </div>
+
+    <!-- BANNER DATA CONTOH -->
+    <div id="dummyDataNoticeBar" class="dummy-notice-bar">
+      <div class="dummy-notice-content">
+        <span class="dummy-badge">Data Contoh</span>
+        <span class="dummy-notice-text">
+          Tiga catatan awal di bawah adalah sampel aktivitas lapangan. Anda dapat mengklik <strong>"Ekspor Word (.docx)"</strong> untuk menguji format dokumen hasil rekapitulasi.
+        </span>
+      </div>
+      <div class="dummy-notice-actions">
+        <button id="btnDeleteDummyData" class="btn btn-sm btn-light hidden" title="Hapus seluruh data contoh bawaan">
+          Hapus Data Contoh
+        </button>
+      </div>
+    </div>
+
+    <!-- TAB NAVIGASI RUANG KERJA UTAMA -->
+    <nav class="app-workspace-nav" aria-label="Navigasi Ruang Kerja">
+      <button type="button" class="workspace-nav-tab active" id="tabNavLogbook" data-route="/dashboard">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+          <polyline points="14 2 14 8 20 8"></polyline>
+          <line x1="16" y1="13" x2="8" y2="13"></line>
+          <line x1="16" y1="17" x2="8" y2="17"></line>
+          <polyline points="10 9 9 9 8 9"></polyline>
+        </svg>
+        <span>Catatan Logbook Lapangan</span>
+        <span class="nav-count-badge" id="navLogbookCount">0</span>
+      </button>
+      <button type="button" class="workspace-nav-tab" id="tabNavMedia" data-route="/media">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="23 7 16 12 23 17 23 7"></polygon>
+          <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
+        </svg>
+        <span>Koleksi Rekaman &amp; Video Wawancara</span>
+        <span class="nav-count-badge" id="navMediaCount">0</span>
+      </button>
+    </nav>
+
+    <!-- KONTEN TAB 1: CATATAN LOGBOOK LAPANGAN -->
+    <div id="dashboardFeedArea" class="dashboard-feed-area">
+      <!-- STATS DASHBOARD -->
+      <section class="stats-grid">
+        <div class="stat-card total">
+          <div class="stat-info">
+            <span class="stat-label">Total Aktivitas</span>
+            <span id="statTotal" class="stat-value">0</span>
+          </div>
+        </div>
+        <div class="stat-card wajo">
+          <div class="stat-info">
+            <span class="stat-label" id="statWilayahLabel">Wilayah Riset</span>
+            <span id="statWilayah" class="stat-value">0</span>
+          </div>
+        </div>
+        <div class="stat-card luwu">
+          <div class="stat-info">
+            <span class="stat-label">Kategori Kegiatan</span>
+            <span id="statCategoryCount" class="stat-value">0</span>
+          </div>
+        </div>
+        <div class="stat-card interview">
+          <div class="stat-info">
+            <span class="stat-label">Hari Riset</span>
+            <span id="statDays" class="stat-value">0</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- ACTION BUTTONS BAR -->
+      <section class="action-bar">
+        <button id="btnOpenAddModal" class="btn btn-primary btn-add">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          <span>Catat Logbook Baru</span>
+        </button>
+        
+        <button id="btnOpenExportModal" class="btn btn-secondary btn-export">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7 10 12 15 17 10"></polyline>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
+          </svg>
+          <span>Ekspor Word (.docx)</span>
+        </button>
+
+        <button id="btnRefreshSync" class="btn btn-light" title="Segarkan Data dari Cloud">
+          <svg id="refreshIcon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="23 4 23 10 17 10"></polyline>
+            <polyline points="1 20 1 14 7 14"></polyline>
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+          </svg>
+        </button>
+      </section>
+
+      <!-- FILTER & SEARCH BAR -->
+      <section class="filter-section">
+        <div class="search-box">
+          <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <input type="text" id="searchInput" placeholder="Cari responden, desa, kecamatan, atau kata kunci..." autocomplete="off">
+          <button id="btnClearSearch" class="btn-clear-search hidden">&times;</button>
+        </div>
+
+        <div class="filter-controls">
+          <!-- Filter Wilayah Pills Dinamis -->
+          <div class="filter-pills" id="kabupatenPills">
+            <button class="pill-btn active" data-kabupaten="all">Semua Wilayah</button>
+          </div>
+
+          <!-- Filter Jenis Kegiatan Dropdown Dinamis -->
+          <div class="filter-select-wrapper">
+            <select id="filterKategoriSelect" class="filter-select">
+              <option value="all">Semua Jenis Kegiatan</option>
+            </select>
+          </div>
+        </div>
+      </section>
+
+      <!-- LIST / FEED LOGBOOK AKTIVITAS -->
+      <section class="logbook-feed-section">
+        <div class="feed-header">
+          <h2 class="feed-title">Daftar Catatan Lapangan</h2>
+          <span id="filteredCountBadge" class="feed-badge">Menampilkan 0 data</span>
+        </div>
+
+        <div id="logbookFeedList" class="feed-list">
+          <!-- Diisi secara dinamis oleh JavaScript -->
+        </div>
+
+        <!-- State Kosong (Empty State) -->
+        <div id="emptyState" class="empty-state hidden">
+          <h3>Belum Ada Catatan Logbook</h3>
+          <p>Mulai catat aktivitas penelitian lapangan skripsi Anda sekarang.</p>
+          <button id="btnEmptyAdd" class="btn btn-primary btn-sm">Tambah Catatan</button>
+        </div>
+      </section>
+    </div>
+
+    <!-- KONTEN TAB 2: KOLEKSI REKAMAN & VIDEO WAWANCARA (CLOUD STORAGE TERENKRIPSI) -->
+    <section id="viewMediaGallery" class="media-view-wrapper hidden">
+      <div class="media-gallery-container">
+        <!-- Media Header Bar -->
+        <div class="media-page-header">
+          <div class="media-header-left">
+            <h2 class="media-page-title">Koleksi Rekaman &amp; Video Wawancara</h2>
+            <p class="media-page-subtitle">
+              Arsip rekaman suara dan video wawancara penelitian yang tersimpan aman di cloud terenkripsi dan terhubung secara autentik ke catatan logbook
+            </p>
+          </div>
+          <div class="media-header-actions">
+            <button type="button" class="btn btn-primary btn-sm" id="btnMediaOpenAddLogbook">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+              <span>Tambah Logbook &amp; Media</span>
+            </button>
+            <button type="button" class="btn btn-outline-neutral btn-sm" id="btnMediaBackToDashboard" data-route="/dashboard">
+              <span>Buka Tabel Logbook</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Ringkasan Statistik Media -->
+        <div class="media-stats-row">
+          <div class="media-stat-card">
+            <span class="stat-count-num" id="statMediaTotalCount">0</span>
+            <span class="stat-count-label">Total Berkas Media</span>
+          </div>
+          <div class="media-stat-card">
+            <span class="stat-count-num" id="statMediaAudioCount">0</span>
+            <span class="stat-count-label">Rekaman Suara</span>
+          </div>
+          <div class="media-stat-card">
+            <span class="stat-count-num" id="statMediaVideoCount">0</span>
+            <span class="stat-count-label">Video Wawancara</span>
+          </div>
+          <div class="media-stat-card">
+            <span class="stat-count-num" id="statMediaSessionsCount">0</span>
+            <span class="stat-count-label">Sesi Wawancara Terdokumentasi</span>
+          </div>
+        </div>
+
+        <!-- Bar Filter & Pencarian Media -->
+        <div class="media-filter-bar">
+          <div class="search-box media-search-box">
+            <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <input type="text" id="inputSearchMedia" class="form-control" placeholder="Cari responden, tanggal, nama berkas, atau lokasi...">
+          </div>
+          
+          <div class="media-filter-pills">
+            <button type="button" class="media-pill active" data-media-filter="all">Semua Media</button>
+            <button type="button" class="media-pill" data-media-filter="audio">Rekaman Suara Saja</button>
+            <button type="button" class="media-pill" data-media-filter="video">Video Wawancara Saja</button>
+          </div>
+        </div>
+
+        <!-- Grid Kartu Media -->
+        <div id="mediaCardsGrid" class="media-cards-grid">
+          <!-- Dirender secara dinamis oleh app.js -->
+        </div>
+
+        <!-- Empty State Jika Belum Ada Media -->
+        <div id="mediaEmptyState" class="media-empty-card hidden">
+          <div class="empty-state-icon" aria-hidden="true">
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="23 7 16 12 23 17 23 7"></polygon>
+              <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
+            </svg>
+          </div>
+          <h3 class="empty-state-title">Belum Ada Berkas Rekaman atau Video Wawancara</h3>
+          <p class="empty-state-desc">
+            Saat menambah atau mengedit catatan logbook, Anda dapat menyertakan rekaman suara (.mp3/.m4a/.wav) atau video wawancara (.mp4/.mov) untuk dicadangkan otomatis ke penyimpanan cloud riset yang aman.
+          </p>
+          <button type="button" class="btn btn-primary btn-sm" id="btnEmptyGoAddLogbook">
+            Catat Logbook dengan Media
+          </button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ======================================================== -->
+  <!-- 4. HALAMAN PENAWARAN PAKET LANGGANAN (ROUTE: /pricing)   -->
+  <!-- ======================================================== -->
+  <section id="viewPricing" class="app-route-view pricing-view-wrapper hidden">
+    <div class="pricing-container">
+      <!-- Breadcrumb / Back Navigation -->
+      <div class="route-nav-bar">
+        <button type="button" class="btn-route-back" id="btnPricingBackToDashboard" data-route="/dashboard">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="19" y1="12" x2="5" y2="12"></line>
+            <polyline points="12 19 5 12 12 5"></polyline>
+          </svg>
+          <span>Kembali ke Dashboard</span>
+        </button>
+      </div>
+
+      <!-- Hero Header -->
+      <div class="pricing-header">
+        <span class="pricing-kicker">Aktivasi Akses Riset Lapangan</span>
+        <h2 class="pricing-title">Paket Lengkap Penelitian Mahasiswa</h2>
+        <p class="pricing-subtitle">
+          Satu paket terpadu untuk pencatatan aktivitas lapangan terstruktur, dokumentasi foto berkoordinat GPS, dan ekspor dokumen Word siap sidang pengesahan.
+        </p>
+      </div>
+
+      <!-- Pricing Hero Tier Card -->
+      <div class="pricing-card-highlight">
+        <div class="pricing-card-header">
+          <div class="plan-tag">Paket Riset 90 Hari</div>
+          <div class="pricing-amount-row">
+            <span class="currency">Rp</span>
+            <span class="amount">50.000</span>
+            <span class="period">/ 3 Bulan (90 Hari)</span>
+          </div>
+          <p class="pricing-summary-text">
+            Akses aktif penuh selama 90 hari sejak verifikasi berhasil. Pembayaran tunggal tanpa perpanjangan otomatis terselubung.
+          </p>
+        </div>
+
+        <div class="pricing-card-action">
+          <button type="button" class="btn btn-primary btn-block btn-lg btn-pricing-cta" id="btnGoToCheckout" data-route="/checkout">
+            <span>Lanjutkan ke Pembayaran</span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+              <polyline points="12 5 19 12 12 19"></polyline>
+            </svg>
+          </button>
+          <span class="pricing-guarantee-note">Mendukung QRIS Nasional & Virtual Account Bank Resmi</span>
+        </div>
+      </div>
+
+      <!-- 4 Benefit Cards Grid -->
+      <div class="pricing-features-section">
+        <h3 class="features-section-title">Fitur & Manfaat yang Anda Dapatkan</h3>
+        <div class="pricing-benefits-grid">
+          <div class="benefit-card">
+            <div class="benefit-header">
+              <h4 class="benefit-title">Penyimpanan Cloud Terpusat</h4>
+            </div>
+            <p class="benefit-desc">
+              Semua catatan observasi dan wawancara tersimpan aman pada akun cloud Anda dan dapat diakses fleksibel dari laptop maupun smartphone.
+            </p>
+          </div>
+
+          <div class="benefit-card">
+            <div class="benefit-header">
+              <h4 class="benefit-title">Dokumentasi Foto Lapangan</h4>
+            </div>
+            <p class="benefit-desc">
+              Penyematan foto stempel koordinat lintang dan bujur langsung ke dalam entri logbook dengan kompresi hemat kuota internet.
+            </p>
+          </div>
+
+          <div class="benefit-card">
+            <div class="benefit-header">
+              <h4 class="benefit-title">Ekspor Dokumen Word (.docx)</h4>
+            </div>
+            <p class="benefit-desc">
+              Unduh rekapitulasi tabel lanskap lengkap dengan kop institusi kampus, foto bukti kegiatan, dan lembar pengesahan Dosen Pembimbing.
+            </p>
+          </div>
+
+          <div class="benefit-card">
+            <div class="benefit-header">
+              <h4 class="benefit-title">Pencadangan Rekaman &amp; Video</h4>
+            </div>
+            <p class="benefit-desc">
+              Cadangkan rekaman audio dan video wawancara lapangan ke cloud terenkripsi, tersusun rapi dan terhubung autentik per catatan aktivitas penelitian.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================================================== -->
+  <!-- 5. PORTAL CHECKOUT TERDEDIKASI (ROUTE: /checkout)         -->
+  <!-- ======================================================== -->
+  <section id="viewCheckout" class="app-route-view checkout-view-wrapper hidden">
+    <div class="checkout-container">
+      <!-- Breadcrumb / Back Navigation -->
+      <div class="route-nav-bar">
+        <button type="button" class="btn-route-back" id="btnCheckoutBackToPricing" data-route="/pricing">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="19" y1="12" x2="5" y2="12"></line>
+            <polyline points="12 19 5 12 12 5"></polyline>
+          </svg>
+          <span>Kembali ke Pilihan Paket</span>
+        </button>
+      </div>
+
+      <!-- Checkout Title -->
+      <div class="checkout-header">
+        <h2 class="checkout-title">Portal Pembayaran Resmi</h2>
+        <p class="checkout-subtitle">Selesaikan transaksi untuk mengaktifkan akses penuh pencatatan riset</p>
+      </div>
+
+      <!-- 2-Column Checkout Layout -->
+      <div class="checkout-layout-grid">
+        <!-- Kolom Kiri: Ringkasan Pesanan (Order Summary) -->
+        <div class="checkout-summary-column">
+          <div class="order-summary-card">
+            <h3 class="summary-card-title">Ringkasan Pesanan</h3>
+
+            <div class="summary-item-card">
+              <div class="summary-item-meta">
+                <span class="item-name">Akses Sistem Logbook Riset</span>
+                <span class="item-duration">Masa Aktif 90 Hari (3 Bulan)</span>
+              </div>
+              <span class="item-price">Rp 50.000</span>
+            </div>
+
+            <div class="summary-cost-breakdown">
+              <div class="cost-row">
+                <span class="cost-label">Subtotal Paket</span>
+                <span class="cost-val" id="checkoutSubtotalText">Rp 50.000</span>
+              </div>
+              <div class="cost-row">
+                <span class="cost-label" id="checkoutFeeLabel">PPN (11%)</span>
+                <span class="cost-val" id="checkoutFeeText">Rp 5.500</span>
+              </div>
+              <div class="cost-divider"></div>
+              <div class="cost-row grand-total-row">
+                <span class="cost-label">Total Pembayaran</span>
+                <strong class="grand-total-val" id="checkoutGrandTotalText">Rp 55.500</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Kolom Kanan: Gateway & Saluran Pembayaran -->
+        <div class="checkout-gateway-column">
+          <!-- Step 1: Pemilihan Saluran Pembayaran -->
+          <div id="checkoutChannelSelection">
+            <div class="channel-section-header">
+              <h3 class="channel-section-title">Pilih Saluran Pembayaran</h3>
+              <p class="channel-section-desc">Pilih metode transfer atau dompet digital yang Anda gunakan</p>
+            </div>
+
+            <div class="payment-channels-list">
+              <!-- Grup QRIS -->
+              <div class="channel-group-heading">Metode Instan &amp; E-Wallet</div>
+              <div class="payment-channel-card channel-card-featured" data-method="qris">
+                <div class="channel-logo-wrapper">
+                  <svg fill="none" viewBox="0 0 80 30" xmlns="http://www.w3.org/2000/svg" aria-label="QRIS">
+                    <g fill="#000">
+                      <path d="M76.723 10.477H64.024V7.936h12.699v-5.08H56.405v12.699h12.699v2.541H56.405v5.08h20.318zM53.867 2.856h-5.08v20.317h5.08zm-27.937 0v5.08h15.238v2.541H25.931v12.699h5.077v-7.544l7.621 7.544h7.619l-7.95-7.621h7.95V2.856zM10.69 15.555h5.067v-5.067h-5.066zm1.273-3.808H14.5v2.538h-2.538z"/>
+                      <path d="M8.152 2.856H3.707a.64.64 0 0 0-.587.393.6.6 0 0 0-.048.244V22.54a.635.635 0 0 0 .635.634H15.77v-5.066H8.152zm14.603 0H10.69v5.08h7.621v7.619h5.067V3.493a.64.64 0 0 0-.179-.45.65.65 0 0 0-.445-.187m.638 15.24h-5.08v11.43h5.08z"/>
+                      <path d="M10.16 0H.635A.637.637 0 0 0 0 .635v9.525h1.27V1.893a.637.637 0 0 1 .634-.624h8.267zm68.57 16.507v8.266a.637.637 0 0 1-.634.635h-8.267v1.259h9.526a.64.64 0 0 0 .645-.635v-9.525z"/>
+                    </g>
+                  </svg>
+                </div>
+                <div class="channel-card-info">
+                  <div class="channel-title-row">
+                    <span class="channel-name">QRIS</span>
+                    <span class="channel-badge-pill">Rekomendasi</span>
+                  </div>
+                </div>
+                <button type="button" class="btn btn-primary btn-sm btn-select-channel" data-method="qris">
+                  <span>Pilih QRIS</span>
+                </button>
+              </div>
+
+              <!-- Grup Virtual Account Bank -->
+              <div class="channel-group-heading" style="margin-top: 14px;">Transfer Bank (Virtual Account)</div>
+              
+              <!-- 1. BRI VA -->
+              <div class="payment-channel-card" data-method="bri_va">
+                <div class="channel-logo-wrapper">
+                  <svg fill="none" viewBox="0 0 80 41" xmlns="http://www.w3.org/2000/svg" aria-label="Bank BRI"><g><path fill="#0857C3" d="M74.954 34.984v4.13h.666v-4.13zm-42.015 0 1.58 4.153-.12.343a1.2 1.2 0 0 1-.23.437.5.5 0 0 1-.301.165.9.9 0 0 1-.372-.029l-.068-.018-.171.577a.8.8 0 0 0 .181.052q.13.026.308.026.291 0 .524-.1a1.1 1.1 0 0 0 .408-.314q.178-.214.3-.543l1.817-4.75h-.724l-.89 2.45q-.13.376-.233.761l-.082.307-.08-.307a9 9 0 0 0-.238-.761l-.879-2.45zm39.49-.051q-.438 0-.786.152-.346.152-.545.427-.2.27-.2.625.001.436.274.716.272.277.836.41l.685.164q.307.07.457.212.151.143.151.357.002.257-.26.438-.254.186-.685.185c-.245 0-.456-.053-.617-.159a.8.8 0 0 1-.334-.499l-.63.155q.071.354.286.596.216.243.544.37.333.122.755.121.488 0 .854-.161.368-.163.572-.446.206-.28.204-.645a1 1 0 0 0-.266-.706q-.274-.277-.833-.409l-.625-.148q-.36-.087-.528-.223a.46.46 0 0 1-.168-.37q0-.258.246-.428.248-.17.617-.17.398.002.596.182.199.18.283.403l.602-.157a1.5 1.5 0 0 0-.279-.514 1.26 1.26 0 0 0-.484-.35 1.8 1.8 0 0 0-.722-.128m-4.225 0q-.562 0-.979.272-.42.273-.65.757a2.6 2.6 0 0 0-.23 1.12q.001.637.235 1.112c.157.32.381.565.668.745q.434.265 1.034.264.426 0 .761-.132c.229-.09.415-.21.57-.37.15-.153.26-.34.323-.546l-.641-.178q-.08.21-.221.356a1 1 0 0 1-.347.21 1.3 1.3 0 0 1-.441.072 1.3 1.3 0 0 1-.662-.167q-.289-.164-.446-.483a1.7 1.7 0 0 1-.157-.689h2.983v-.278q0-.574-.154-.97a1.7 1.7 0 0 0-.417-.635 1.6 1.6 0 0 0-.58-.351 2 2 0 0 0-.65-.11m0 .592q.373-.002.627.179.25.178.377.493.094.234.117.515h-2.303q.016-.282.137-.528a1.2 1.2 0 0 1 .407-.478q.264-.182.638-.181m-4.226-.592q-.466 0-.817.241-.272.184-.445.573l-.005-.763h-.64v4.132h.667V36.64c0-.237.046-.435.136-.603a.94.94 0 0 1 .374-.375q.236-.131.532-.132.433 0 .683.272.249.271.25.745v2.57h.664V36.49q-.001-.522-.176-.868a1.2 1.2 0 0 0-.489-.518 1.5 1.5 0 0 0-.734-.171m-4.76 0q-.563-.002-.988.265-.42.266-.657.75-.239.482-.238 1.126 0 .638.237 1.118.239.478.658.747.425.265.989.264.56 0 .99-.264.425-.269.66-.747.236-.48.237-1.118 0-.645-.237-1.126a1.77 1.77 0 0 0-.66-.75 1.83 1.83 0 0 0-.99-.265m0 .594q.416 0 .686.216.268.214.4.568c.087.239.128.49.128.763q.001.408-.128.755-.132.352-.4.565-.27.215-.685.215-.417-.001-.683-.215a1.3 1.3 0 0 1-.396-.565 2.2 2.2 0 0 1-.128-.755q0-.412.128-.763a1.3 1.3 0 0 1 .396-.568q.266-.216.683-.216m-8.881-.594q-.47 0-.822.241-.27.184-.443.572l-.002-.762h-.641v4.133h.664v-2.478q.001-.354.137-.603a.93.93 0 0 1 .372-.375q.238-.131.534-.132.43 0 .681.272.251.271.252.745v2.57h.664V36.49q0-.522-.177-.868a1.16 1.16 0 0 0-.487-.518 1.5 1.5 0 0 0-.732-.171m-39.1 0q-.467 0-.818.241-.271.184-.445.577l-.003-.767h-.64v4.132h.667V36.64c0-.237.043-.435.136-.603a.94.94 0 0 1 .373-.375q.237-.131.532-.132.434 0 .683.272.249.271.25.745v2.57h.662V36.49q0-.522-.173-.868a1.17 1.17 0 0 0-.49-.518 1.5 1.5 0 0 0-.733-.171m67.084-.002c-.215 0-.427.03-.644.088a1.8 1.8 0 0 0-.594.302 1.44 1.44 0 0 0-.431.592l.64.208q.067-.143.198-.283a1 1 0 0 1 .342-.229q.21-.094.507-.092.285-.001.48.094a.66.66 0 0 1 .29.279.9.9 0 0 1 .095.435v.023c0 .101-.041.171-.113.215a.9.9 0 0 1-.347.086l-.603.074c-.19.027-.384.058-.57.101a1.9 1.9 0 0 0-.521.192.96.96 0 0 0-.373.349c-.095.149-.143.338-.143.576q-.001.406.19.69c.124.19.3.339.505.432q.322.149.714.148.35 0 .6-.103a1.3 1.3 0 0 0 .4-.255q.155-.155.226-.3h.045v.563h.654v-2.723q.002-.485-.16-.776a1.13 1.13 0 0 0-.407-.435 1.5 1.5 0 0 0-.51-.198 2.5 2.5 0 0 0-.47-.053m.883 2.12v.574a.96.96 0 0 1-.132.478 1 1 0 0 1-.39.376 1.23 1.23 0 0 1-.625.147 1.2 1.2 0 0 1-.437-.075.7.7 0 0 1-.306-.218.6.6 0 0 1-.11-.361q-.001-.233.126-.374a.8.8 0 0 1 .333-.208 2.3 2.3 0 0 1 .45-.103q.096-.01.257-.033a6 6 0 0 0 .343-.05 3 3 0 0 0 .313-.068q.135-.038.178-.085m-40.13-2.12c-.212 0-.424.03-.645.088a1.8 1.8 0 0 0-.594.302q-.27.212-.427.592l.639.208a1.1 1.1 0 0 1 .198-.283q.13-.14.34-.229a1.2 1.2 0 0 1 .508-.092q.287-.001.481.094a.64.64 0 0 1 .287.279.9.9 0 0 1 .099.435v.023q0 .15-.114.215a1 1 0 0 1-.347.086c-.152.02-.356.043-.602.074a7 7 0 0 0-.573.101q-.284.063-.518.192a.97.97 0 0 0-.373.349 1.05 1.05 0 0 0-.145.576q0 .406.192.69c.124.19.3.34.505.432q.322.149.712.148.353 0 .598-.103c.167-.068.3-.156.405-.255q.154-.155.225-.3h.045v.563h.654v-2.723q-.002-.485-.16-.776a1.13 1.13 0 0 0-.407-.435 1.4 1.4 0 0 0-.51-.198 2.5 2.5 0 0 0-.472-.053m.886 2.12v.574a.96.96 0 0 1-.133.478q-.135.232-.391.376-.255.148-.623.147-.25 0-.438-.075a.7.7 0 0 1-.305-.218.6.6 0 0 1-.11-.361q0-.233.124-.374a.8.8 0 0 1 .335-.208q.208-.073.45-.103l.262-.033q.161-.019.336-.05.158-.023.313-.068a.4.4 0 0 0 .18-.085m-13.505-2.12q-.318 0-.642.088c-.216.063-.42.165-.598.302q-.27.212-.427.592l.64.208a1.04 1.04 0 0 1 .538-.512q.21-.094.507-.092.288-.001.481.094a.65.65 0 0 1 .287.279.9.9 0 0 1 .095.435v.023q0 .15-.112.215a.9.9 0 0 1-.344.086l-.602.074a7 7 0 0 0-.574.101q-.286.063-.52.192a1 1 0 0 0-.376.349c-.093.149-.14.338-.14.576q.001.406.188.69c.126.19.303.338.51.432q.32.149.711.148.352 0 .599-.103c.165-.068.299-.156.404-.255q.154-.155.225-.3h.045v.563h.652v-2.723q0-.485-.16-.776a1.13 1.13 0 0 0-.407-.435 1.5 1.5 0 0 0-.512-.198 2.4 2.4 0 0 0-.468-.053m.88 2.12v.574a.99.99 0 0 1-.52.854 1.2 1.2 0 0 1-.622.147q-.249 0-.442-.075a.7.7 0 0 1-.303-.218.57.57 0 0 1-.112-.361q0-.233.129-.374a.8.8 0 0 1 .332-.208 2.3 2.3 0 0 1 .45-.103q.098-.01.26-.033.165-.02.34-.05.158-.023.311-.068.139-.038.178-.085M6.62 34.931q-.318 0-.643.088a1.8 1.8 0 0 0-.595.302q-.27.212-.427.592l.638.208q.075-.156.196-.283.135-.138.342-.229.211-.094.506-.092.288-.001.48.094c.124.06.227.157.292.279a.9.9 0 0 1 .094.435v.023q0 .15-.111.215a.9.9 0 0 1-.347.086l-.604.074a7 7 0 0 0-.574.101c-.185.042-.36.106-.515.192a1 1 0 0 0-.376.349c-.093.149-.14.338-.14.576q-.002.406.187.69c.126.19.302.339.508.432q.32.149.712.148.35 0 .6-.103c.163-.068.297-.156.4-.255q.159-.155.227-.3h.044v.563h.653v-2.723q-.001-.485-.16-.776a1.1 1.1 0 0 0-.407-.435 1.4 1.4 0 0 0-.51-.198 2.4 2.4 0 0 0-.47-.053m.883 2.12v.574a.96.96 0 0 1-.132.478q-.134.232-.387.376a1.23 1.23 0 0 1-.628.147q-.246 0-.437-.075a.67.67 0 0 1-.303-.218.57.57 0 0 1-.112-.361q0-.233.126-.374a.76.76 0 0 1 .334-.208 2.3 2.3 0 0 1 .448-.103q.095-.01.262-.033a6 6 0 0 0 .34-.05q.173-.027.312-.068.136-.038.177-.085M41.903 34v.984h-.621v.57h.621v2.54q0 .509.297.79.303.283.838.282.127 0 .258-.018.12-.014.235-.054l-.136-.562-.177.03q-.081.014-.162.016-.264 0-.377-.13-.111-.127-.111-.404v-2.49h.85v-.57h-.85V34zm13.8-.39v2.036h-.053a3 3 0 0 0-.192-.28 1.2 1.2 0 0 0-.367-.301q-.236-.131-.638-.132-.514-.002-.91.26a1.7 1.7 0 0 0-.619.736q-.224.48-.223 1.133 0 .654.221 1.139c.149.317.355.567.62.74a1.6 1.6 0 0 0 .907.262q.395.001.633-.134.239-.133.37-.307.133-.171.198-.285h.074v.64h.644V33.61zm-1.153 1.917q.379 0 .638.194.26.19.392.532.128.341.127.8c0 .308-.04.576-.132.811a1.2 1.2 0 0 1-.39.547 1.02 1.02 0 0 1-.635.198 1 1 0 0 1-.648-.209 1.25 1.25 0 0 1-.394-.563 2.3 2.3 0 0 1-.132-.784q.001-.428.13-.773.13-.349.39-.55.262-.203.654-.203m-8.073-1.917v5.506h.701V33.61zm-17.305 0v5.506h.664V37.59l.435-.408 1.513 1.934h.852l-1.857-2.356 1.727-1.776h-.823l-1.766 1.822h-.08V33.61zm-9.005 0v5.506h.7V36.98h1.19q.064 0 .127-.003l1.145 2.14h.815l-1.235-2.263q.108-.038.203-.087.415-.21.618-.59.2-.375.2-.868 0-.492-.2-.875a1.43 1.43 0 0 0-.62-.604c-.276-.149-.627-.219-1.058-.219zm.7.615h1.148q.439 0 .708.134c.173.09.305.217.386.378q.123.243.123.571 0 .325-.123.557a.8.8 0 0 1-.386.36q-.262.13-.7.131h-1.155zm-7.063-.615v5.506h.666V37.59l.435-.408 1.51 1.934h.855l-1.857-2.356 1.727-1.776h-.823l-1.768 1.822h-.079V33.61zm-13.594 0v5.506h2.016q.65 0 1.056-.195.405-.19.597-.527c.13-.22.19-.47.19-.746q0-.43-.172-.733a1.3 1.3 0 0 0-.427-.462 1.1 1.1 0 0 0-.515-.175v-.052q.237-.066.443-.202.207-.14.33-.37.127-.23.126-.588 0-.4-.182-.73a1.3 1.3 0 0 0-.557-.528c-.252-.132-.567-.198-.953-.198zm.702.621H2.15q.532-.002.784.248a.82.82 0 0 1 .247.604q.001.285-.14.5a.95.95 0 0 1-.38.327 1.2 1.2 0 0 1-.536.116H.912zm0 2.387h1.333q.352 0 .612.14.251.143.396.372a.97.97 0 0 1 .139.511.79.79 0 0 1-.27.607c-.18.163-.488.247-.915.247H.912zm74.378-3.19a.46.46 0 0 0-.326.126.4.4 0 0 0-.136.314q-.002.18.136.31.135.13.326.13a.45.45 0 0 0 .326-.13.4.4 0 0 0 .138-.31.41.41 0 0 0-.138-.314.46.46 0 0 0-.326-.126m.937-30.787a.37.37 0 0 0-.371.372v23.838a.37.37 0 0 0 .37.374h3.405a.26.26 0 0 0 .12-.027.36.36 0 0 0 .249-.347V3.013a.37.37 0 0 0-.37-.372zm-20.416 0a.373.373 0 0 0-.372.372v23.838c0 .207.167.374.372.374h3.309a.373.373 0 0 0 .373-.374V18.19a.367.367 0 0 1 .37-.37h2.675a.37.37 0 0 1 .3.155l6.39 9.092a.38.38 0 0 0 .304.159h3.809a.37.37 0 0 0 .3-.586l-6.015-8.562a.373.373 0 0 1 .212-.573c.966-.254 1.822-.632 2.542-1.123a7.5 7.5 0 0 0 1.81-1.724 6.8 6.8 0 0 0 1.064-2.16c.23-.796.347-1.62.348-2.447a8.2 8.2 0 0 0-.536-2.996 6.26 6.26 0 0 0-1.586-2.32c-.708-.65-1.61-1.168-2.676-1.536-1.081-.369-2.348-.557-3.77-.557zm4.051 3.6h5.21c.305 0 .6.019.903.056.935.143 1.704.48 2.292 1.011.811.732 1.224 1.643 1.224 2.707a4.7 4.7 0 0 1-.256 1.527 3.56 3.56 0 0 1-.821 1.343c-.371.383-.852.697-1.424.932-.571.235-1.26.355-2.05.355h-5.078a.37.37 0 0 1-.369-.374V6.611a.367.367 0 0 1 .37-.37m-23.395-3.6a.37.37 0 0 0-.371.372v23.838c0 .207.167.374.37.374h9.39c1.42 0 2.672-.196 3.726-.576 1.042-.38 1.917-.905 2.597-1.564a6.2 6.2 0 0 0 1.523-2.308c.332-.879.501-1.84.501-2.851 0-1.35-.311-2.565-.926-3.613-.621-1.056-1.35-1.879-2.172-2.45a.372.372 0 0 1-.05-.568c.16-.16.357-.373.578-.631a5.2 5.2 0 0 0 .61-.883 6 6 0 0 0 .494-1.141 4.3 4.3 0 0 0 .197-1.314c0-.937-.16-1.822-.478-2.633a5.6 5.6 0 0 0-1.46-2.104c-.661-.603-1.498-1.083-2.495-1.426-1.005-.344-2.2-.522-3.55-.522zm3.961 3.6h4.38c.852 0 1.578.108 2.16.322h.001c.39.15.72.349.972.592.65.623.98 1.379.98 2.25 0 .753-.134 1.392-.402 1.901-.256.487-.522.869-.786 1.135l-.11.11h-7.195a.37.37 0 0 1-.372-.374l.001-5.566a.37.37 0 0 1 .371-.37m0 9.949h5.678c1.38 0 2.422.371 3.109 1.108a3.74 3.74 0 0 1 .97 2.554c0 1.01-.374 1.887-1.102 2.605-.733.716-1.917 1.081-3.524 1.081h-5.13a.37.37 0 0 1-.372-.371V16.56a.37.37 0 0 1 .371-.371M4.408 0A4.407 4.407 0 0 0 0 4.41v21.15a4.41 4.41 0 0 0 4.409 4.412h21.15a4.41 4.41 0 0 0 4.413-4.413V4.411A4.41 4.41 0 0 0 25.56 0zm0 3.438h2.868v.015a3.48 3.48 0 0 1 2.406.868c.053.048.107.101.157.15 1.35 1.348 1.33 3.384-.037 4.964l-4.516 4.962a.87.87 0 0 0 0 1.172l4.485 4.927.043.051c1.38 1.504 1.393 3.584.025 4.947a3.45 3.45 0 0 1-2.562 1.021v.016H4.408a.97.97 0 0 1-.972-.972V4.409a.97.97 0 0 1 .972-.971m8.95 0h3.17v.016a3.5 3.5 0 0 1 2.407.868c.054.048.107.101.157.15 1.349 1.348 1.33 3.384-.037 4.965l-4.465 5.01a.876.876 0 0 0 .012 1.177L24.801 26.53H13.358c1.537-2.597 1.19-5.937-1.041-8.345l-2.914-3.2 2.88-3.17.062-.063c2.197-2.484 2.53-5.754 1.013-8.314m9.251.001h2.95a.97.97 0 0 1 .972.972v18.881l-7.825-8.363 2.828-3.111.06-.065C23.791 9.27 24.128 6 22.61 3.44"/></g></svg>
+                </div>
+                <div class="channel-card-info">
+                  <span class="channel-name">BRI Virtual Account</span>
+                </div>
+                <button type="button" class="btn btn-secondary btn-sm btn-select-channel" data-method="bri_va">
+                  <span>Pilih BRI</span>
+                </button>
+              </div>
+
+              <!-- 2. BNI VA -->
+              <div class="payment-channel-card" data-method="bni_va">
+                <div class="channel-logo-wrapper">
+                  <svg fill="none" viewBox="0 0 80 24" xmlns="http://www.w3.org/2000/svg" aria-label="Bank BNI"><g fill-rule="evenodd"><path fill="#F15A23" d="m0 8.135 6.749 8.514L0 22.24zm2.716 14.106 5.079-4.248 3.51 4.248zM0 3.58l1.761 2.228 7.242 9.048 2.346-1.868s-1.948-2.294-3.256-4.853C5.536 3.132 7.346.016 7.346.016H0zm10.035 12.673 2.39-1.974s2.282 3.005 4.929 3.714c3.468.93 5.003-1.344 5.003-1.344v5.592H14.74l1.717-1.485s-.896.598-3.088-.92c-1.293-.896-3.334-3.583-3.334-3.583M10.255 0s-.763 1.039-.22 3.58c.58 2.716 2.887 5.59 2.882 5.526 0 0 .148-2.854 1.823-4.53 3.57-3.57 7.617-1.444 7.617-1.444V.016z"/><path fill="#F15A23" d="M22.357 6.896S20.1 4.96 18.137 4.96c-2.512 0-3.883 2.168-3.883 3.741 0 2.29 1.1 3.564 2.204 4.667 1.585 1.586 3.515 3.297 5.9 1.92z"/><path fill="#005E6A" d="M48.072.233H53.4s4.72 7.147 7.04 10.1a341 341 0 0 1 4.816 6.316V1.834c0-.64-1.68-1.601-1.68-1.601h6.145s-2.017.828-2.017 1.6v21.553s-1.934-1.072-4.128-3.621C61.111 16.9 52.344 5.338 52.344 5.338v14.976c0 .767 1.68 1.927 1.68 1.927h-5.952s1.632-1.17 1.632-1.927V1.834c0-.68-1.632-1.601-1.632-1.601m25.09 0H80s-1.836.87-1.836 1.6v18.481c0 .799 1.836 1.927 1.836 1.927h-6.838s1.71-1.154 1.71-1.927V1.834c0-.703-1.71-1.601-1.71-1.601m-45.209 0s1.773.884 1.773 1.6v18.481c0 .786-1.773 1.927-1.773 1.927h10.13c.634 0 7.725-1.16 7.725-6.627S40.3 9.635 40.3 9.635s3.356-.933 3.356-4.674c0-4.032-4.94-4.728-5.572-4.728zm5.382 9.04v-6.88h4.115c.633 0 2.85.739 2.85 3.481 0 2.261-2.216 3.399-2.85 3.399zm0 1.804h4.749c.633 0 4.368.97 4.368 4.212 0 3.304-3.735 4.476-4.368 4.476h-4.75z"/></g></svg>
+                </div>
+                <div class="channel-card-info">
+                  <span class="channel-name">BNI Virtual Account</span>
+                </div>
+                <button type="button" class="btn btn-secondary btn-sm btn-select-channel" data-method="bni_va">
+                  <span>Pilih BNI</span>
+                </button>
+              </div>
+
+              <!-- 3. ATM Bersama VA -->
+              <div class="payment-channel-card" data-method="atm_bersama_va">
+                <div class="channel-logo-wrapper">
+                  <svg viewBox="0 0 72 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="ATM Bersama">
+                    <rect x="0" y="1" width="72" height="22" rx="3" fill="#004B87"/>
+                    <path d="M4 18L8 6H6L2 18H4Z" fill="#EAB308"/>
+                    <path d="M8 18L12 6H10L6 18H8Z" fill="#ED1B24"/>
+                    <text x="15" y="11" font-family="system-ui, -apple-system, sans-serif" font-size="8.5" font-weight="900" fill="#FFFFFF" letter-spacing="0.8">ATM</text>
+                    <text x="15" y="19.5" font-family="system-ui, -apple-system, sans-serif" font-size="6.8" font-weight="800" fill="#FFFFFF" letter-spacing="0.4">BERSAMA</text>
+                  </svg>
+                </div>
+                <div class="channel-card-info">
+                  <span class="channel-name">ATM Bersama Virtual Account</span>
+                </div>
+                <button type="button" class="btn btn-secondary btn-sm btn-select-channel" data-method="atm_bersama_va">
+                  <span>Pilih Bersama</span>
+                </button>
+              </div>
+
+              <!-- 4. BNC VA -->
+              <div class="payment-channel-card" data-method="bnc_va">
+                <div class="channel-logo-wrapper">
+                  <svg viewBox="0 0 72 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Bank Neo Commerce">
+                    <rect x="0" y="1" width="72" height="22" rx="3" fill="#FFD100"/>
+                    <text x="36" y="14" font-family="Georgia, serif" font-size="11" font-weight="900" fill="#0F172A" text-anchor="middle" letter-spacing="0.4">BNC</text>
+                    <text x="36" y="20" font-family="system-ui, -apple-system, sans-serif" font-size="4.2" font-weight="700" fill="#334155" text-anchor="middle" letter-spacing="0.2">bank neo commerce</text>
+                  </svg>
+                </div>
+                <div class="channel-card-info">
+                  <span class="channel-name">Bank Neo Commerce (BNC) VA</span>
+                </div>
+                <button type="button" class="btn btn-secondary btn-sm btn-select-channel" data-method="bnc_va">
+                  <span>Pilih BNC</span>
+                </button>
+              </div>
+
+              <!-- 5. CIMB Niaga VA -->
+              <div class="payment-channel-card" data-method="cimb_niaga_va">
+                <div class="channel-logo-wrapper">
+                  <svg viewBox="0 0 72 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Bank CIMB Niaga">
+                    <rect x="1" y="2" width="20" height="20" rx="3" fill="#8B0000"/>
+                    <polygon points="4,6 13,6 17,12 13,18 4,18 8,12" fill="#FFFFFF"/>
+                    <polygon points="8,8 12,8 14.5,12 12,16 8,16 10,12" fill="#8B0000"/>
+                    <text x="25" y="11" font-family="system-ui, -apple-system, sans-serif" font-size="8" font-weight="900" fill="#8B0000" letter-spacing="-0.2">CIMB</text>
+                    <text x="25" y="19" font-family="system-ui, -apple-system, sans-serif" font-size="6" font-weight="800" fill="#475569" letter-spacing="0.4">NIAGA</text>
+                  </svg>
+                </div>
+                <div class="channel-card-info">
+                  <span class="channel-name">CIMB Niaga Virtual Account</span>
+                </div>
+                <button type="button" class="btn btn-secondary btn-sm btn-select-channel" data-method="cimb_niaga_va">
+                  <span>Pilih CIMB</span>
+                </button>
+              </div>
+
+              <!-- 6. Maybank VA -->
+              <div class="payment-channel-card" data-method="maybank_va">
+                <div class="channel-logo-wrapper">
+                  <svg viewBox="0 0 72 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Maybank">
+                    <rect x="1" y="2" width="20" height="20" rx="10" fill="#FFC80B"/>
+                    <path d="M11 5C7.5 5 4.8 7.5 4.8 11C4.8 13.2 5.8 15.1 7.4 16.3L8.2 13.7C7.8 13 7.5 12.1 7.5 11C7.5 9 9.1 7.5 11 7.5C12.2 7.5 13.2 8.1 13.8 8.9L15.7 7.7C14.7 6 13 5 11 5ZM12.8 10.2C12.3 10.2 11.9 10.6 11.9 11.1C11.9 11.6 12.3 12 12.8 12C13.3 12 13.7 11.6 13.7 11.1C13.7 10.6 13.3 10.2 12.8 10.2ZM16 10.6L14.4 12C14.9 12.8 14.7 13.9 14 14.6L15.3 15.9C16.3 14.8 16.9 13 16.6 11.5L16 10.6Z" fill="#0F172A"/>
+                    <text x="25" y="15.5" font-family="system-ui, -apple-system, sans-serif" font-size="8.5" font-weight="800" fill="#0F172A" letter-spacing="-0.3">Maybank</text>
+                  </svg>
+                </div>
+                <div class="channel-card-info">
+                  <span class="channel-name">Maybank Virtual Account</span>
+                </div>
+                <button type="button" class="btn btn-secondary btn-sm btn-select-channel" data-method="maybank_va">
+                  <span>Pilih Maybank</span>
+                </button>
+              </div>
+
+              <!-- 7. Permata VA -->
+              <div class="payment-channel-card" data-method="permata_va">
+                <div class="channel-logo-wrapper">
+                  <svg viewBox="0 0 72 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Bank Permata">
+                    <polygon points="10,3 16,9 10,12" fill="#008D46"/>
+                    <polygon points="10,3 4,9 10,12" fill="#8B0000"/>
+                    <polygon points="4,9 10,21 10,12" fill="#EAB308"/>
+                    <polygon points="16,9 10,21 10,12" fill="#005E6A"/>
+                    <text x="21" y="15" font-family="system-ui, -apple-system, sans-serif" font-size="8.5" font-weight="800" fill="#0F172A" letter-spacing="-0.2">Permata</text>
+                  </svg>
+                </div>
+                <div class="channel-card-info">
+                  <span class="channel-name">Permata Virtual Account</span>
+                </div>
+                <button type="button" class="btn btn-secondary btn-sm btn-select-channel" data-method="permata_va">
+                  <span>Pilih Permata</span>
+                </button>
+              </div>
+
+              <!-- 8. Artha Graha VA -->
+              <div class="payment-channel-card" data-method="artha_graha_va">
+                <div class="channel-logo-wrapper">
+                  <svg viewBox="0 0 72 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Bank Artha Graha">
+                    <rect x="1" y="2" width="20" height="20" rx="3.5" fill="#FFFFFF" stroke="#E2E8F0"/>
+                    <path d="M5 16L9.5 5H12L7.5 16H5ZM9.5 16L14 5H16.5L12 16H9.5Z" fill="#B38808"/>
+                    <circle cx="15" cy="13.5" r="2.2" fill="#15803D"/>
+                    <text x="25" y="10" font-family="system-ui, -apple-system, sans-serif" font-size="5" font-weight="900" fill="#B38808" letter-spacing="0.3">BANK</text>
+                    <text x="25" y="18" font-family="system-ui, -apple-system, sans-serif" font-size="6" font-weight="900" fill="#0F172A" letter-spacing="-0.2">ARTHA GRAHA</text>
+                  </svg>
+                </div>
+                <div class="channel-card-info">
+                  <span class="channel-name">Bank Artha Graha VA</span>
+                </div>
+                <button type="button" class="btn btn-secondary btn-sm btn-select-channel" data-method="artha_graha_va">
+                  <span>Pilih AG</span>
+                </button>
+              </div>
+
+              <!-- 9. Sampoerna VA -->
+              <div class="payment-channel-card" data-method="sampoerna_va">
+                <div class="channel-logo-wrapper">
+                  <svg viewBox="0 0 72 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Bank Sahabat Sampoerna">
+                    <circle cx="11" cy="12" r="10" fill="#991B1B" stroke="#F59E0B" stroke-width="1.2"/>
+                    <circle cx="11" cy="12" r="6.5" fill="none" stroke="#FFFFFF" stroke-width="0.7"/>
+                    <path d="M11 6V18M5 12H17M7 8L15 16M7 16L15 8" stroke="#F59E0B" stroke-width="0.8"/>
+                    <circle cx="11" cy="12" r="2" fill="#FFFFFF"/>
+                    <text x="25" y="10" font-family="system-ui, -apple-system, sans-serif" font-size="5" font-weight="800" fill="#991B1B" letter-spacing="0.2">BANK SAHABAT</text>
+                    <text x="25" y="19" font-family="system-ui, -apple-system, sans-serif" font-size="6.5" font-weight="900" fill="#0F172A" letter-spacing="-0.2">SAMPOERNA</text>
+                  </svg>
+                </div>
+                <div class="channel-card-info">
+                  <span class="channel-name">Bank Sahabat Sampoerna VA</span>
+                </div>
+                <button type="button" class="btn btn-secondary btn-sm btn-select-channel" data-method="sampoerna_va">
+                  <span>Pilih Sampoerna</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 2: Detail Pembayaran Aktif -->
+          <div id="checkoutActivePaymentView" class="hidden">
+            <div class="active-payment-nav">
+              <button type="button" class="btn-back-channel" id="btnCheckoutChangeMethod">
+                &larr; Ganti Saluran Pembayaran
+              </button>
+            </div>
+
+            <!-- Sub-View QRIS Aktif -->
+            <div id="checkoutQrisArea" class="hidden">
+              <div class="qris-card">
+                <div class="qris-header-row">
+                  <span class="qris-logo-text">QRIS NASIONAL</span>
+                  <span class="qris-order-tag" id="qrisOrderIdText">Order #...</span>
+                </div>
+
+                <!-- Sandbox Notice Box -->
+                <div id="qrisSandboxNotice" class="sandbox-notice-box hidden">
+                  <div class="sandbox-badge-row">
+                    <span class="badge-sandbox-tag">Mode Sandbox Pakasir (Uji Coba)</span>
+                  </div>
+                  <p class="sandbox-text">
+                    Proyek Pakasir saat ini berstatus <strong>Sandbox</strong>. Kode QR berikut adalah kode simulasi dari server Pakasir. Untuk menerima pembayaran uang riil dari m-banking atau e-wallet, silakan nonaktifkan Mode Sandbox (Go Live) di <a href="https://app.pakasir.com" target="_blank" rel="noopener">dashboard Pakasir</a>.
+                  </p>
+                </div>
+
+                <div class="qris-image-container" id="qrisImageContainer">
+                  <div class="spinner" id="qrisSpinner"></div>
+                  <img id="qrisImageElement" src="" alt="Scan QRIS Pakasir" class="hidden" />
+                </div>
+
+                <!-- Rincian Biaya & Total Tagihan -->
+                <div class="qris-amount-summary">
+                  <div class="amount-row">
+                    <span class="amount-label">Paket Langganan (90 Hari)</span>
+                    <span class="amount-val" id="qrisBaseAmount">Rp 50.000</span>
+                  </div>
+                  <div class="amount-row" id="qrisFeeRow">
+                    <span class="amount-label" id="qrisFeeLabel">PPN (11%)</span>
+                    <span class="amount-val" id="qrisFeeAmount">Rp 5.500</span>
+                  </div>
+                  <div class="amount-divider"></div>
+                  <div class="amount-row total-row">
+                    <span class="amount-label">Total Tagihan</span>
+                    <strong class="amount-total" id="qrisTotalAmount">Rp 55.500</strong>
+                  </div>
+                </div>
+
+                <p class="qris-instructions" id="qrisInstructionsText">Buka aplikasi mobile banking (BCA, Mandiri, BRI, BNI) atau dompet digital (GoPay, OVO, DANA), lalu scan kode QR di atas.</p>
+              </div>
+            </div>
+
+            <!-- Sub-View Virtual Account Aktif -->
+            <div id="checkoutVaArea" class="hidden">
+              <div class="va-card">
+                <div class="va-header-row">
+                  <span class="va-bank-title" id="vaBankNameTitle">Bank Virtual Account</span>
+                  <span class="qris-order-tag" id="vaOrderIdText">Order #...</span>
+                </div>
+
+                <!-- Sandbox Notice Box untuk VA -->
+                <div id="vaSandboxNotice" class="sandbox-notice-box hidden">
+                  <div class="sandbox-badge-row">
+                    <span class="badge-sandbox-tag">Mode Sandbox Pakasir (Uji Coba)</span>
+                  </div>
+                  <p class="sandbox-text">
+                    Proyek Pakasir saat ini berstatus <strong>Sandbox</strong>. Nomor Virtual Account di bawah adalah nomor simulasi dari server Pakasir. Anda dapat menguji proses pembayaran dengan tombol uji simulasi di bawah.
+                  </p>
+                </div>
+
+                <!-- Box Nomor Virtual Account -->
+                <div class="va-number-container">
+                  <span class="va-number-label">Nomor Virtual Account</span>
+                  <div class="va-number-row">
+                    <span class="va-number-val" id="vaNumberDisplay">Menghubungkan...</span>
+                    <button type="button" class="btn-copy" id="btnCopyVaNumber">Salin</button>
+                  </div>
+                  <p class="va-expiry-hint" id="vaExpiryHint">Berlaku selama 24 jam</p>
+                </div>
+
+                <!-- Box Total Pembayaran -->
+                <div class="va-amount-container">
+                  <div class="amount-row">
+                    <span class="amount-label">Paket Langganan (90 Hari)</span>
+                    <span class="amount-val" id="vaBaseAmount">Rp 50.000</span>
+                  </div>
+                  <div class="amount-row" id="vaFeeRow">
+                    <span class="amount-label" id="vaFeeLabel">PPN (11%)</span>
+                    <span class="amount-val" id="vaFeeAmount">Rp 5.500</span>
+                  </div>
+                  <div class="amount-divider"></div>
+                  <div class="amount-row total-row">
+                    <span class="amount-label">Total Tagihan</span>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                      <strong class="amount-total" id="vaTotalAmount">Rp 55.500</strong>
+                      <button type="button" class="btn-copy-sm" id="btnCopyVaAmount">Salin</button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Panduan Pembayaran VA -->
+                <div class="va-instructions-box">
+                  <h5 class="va-instructions-title">Petunjuk Pembayaran:</h5>
+                  <ol class="va-instructions-list" id="vaInstructionsList">
+                    <li>Buka aplikasi Mobile Banking (BRImo, BNI Mobile, PermataMobile, dll.) atau ATM.</li>
+                    <li>Pilih menu <strong>Transfer</strong> &rarr; <strong>Virtual Account / Pembayaran</strong>.</li>
+                    <li>Masukkan nomor Virtual Account yang tertera di atas.</li>
+                    <li>Pastikan nama merchant dan nominal transfer sesuai.</li>
+                    <li>Selesaikan pembayaran dan simpan bukti transaksi Anda.</li>
+                  </ol>
+                </div>
+              </div>
+            </div>
+
+            <!-- Tombol Aksi Bersama -->
+            <div class="qris-action-buttons">
+              <button type="button" class="btn btn-primary btn-block" id="btnCheckPaymentStatus">
+                <span>Cek Status Pembayaran</span>
+              </button>
+            </div>
+
+            <!-- Tombol Bantuan Simulasi Testing Langsung ke Server Pakasir (Reaktif Sandbox) -->
+            <div id="qrisSimulateArea" class="qris-simulate-container hidden">
+              <button type="button" class="btn-simulation-link" id="btnSimulateSuccessPayment">
+                Uji Simulasi Pembayaran (Server Pakasir API)
+              </button>
+              <p class="simulate-hint">Mengirim sinyal verifikasi sukses ke API resmi app.pakasir.com/api/paymentsimulation.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================================================== -->
+  <!-- 6. HALAMAN SUKSES PEMBAYARAN (ROUTE: /payment-success)   -->
+  <!-- ======================================================== -->
+  <section id="viewPaymentSuccess" class="app-route-view success-view-wrapper hidden">
+    <div class="success-container">
+      <div class="success-receipt-card" id="printableReceiptArea">
+        <!-- Status Icon & Header -->
+        <div class="success-header-badge">
+          <div class="success-icon-circle">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+          </div>
+          <span class="receipt-status-badge">Pembayaran Berhasil &bull; Lunas</span>
+        </div>
+
+        <h2 class="success-title">Akses Riset Berhasil Diaktifkan</h2>
+        <p class="success-subtitle">
+          Terima kasih. Pembayaran Anda telah terverifikasi oleh gateway resmi. Akun Anda kini memiliki akses penuh pencatatan lapangan dan ekspor dokumen Word selama 90 hari.
+        </p>
+
+        <!-- Tanda Terima Digital (Receipt Box) -->
+        <div class="receipt-details-box">
+          <div class="receipt-header-row">
+            <div>
+              <span class="receipt-box-kicker">Tanda Terima Pembayaran Digital</span>
+              <span class="receipt-service-title">LogbookRiset.id SaaS Subscription</span>
+            </div>
+            <span class="receipt-order-code" id="receiptOrderIdText">Order #LB-...</span>
+          </div>
+
+          <div class="receipt-divider"></div>
+
+          <div class="receipt-rows-list">
+            <div class="receipt-row">
+              <span class="receipt-label">Paket Langganan</span>
+              <span class="receipt-val">Akses Sistem Logbook Riset (90 Hari)</span>
+            </div>
+            <div class="receipt-row">
+              <span class="receipt-label">Saluran Pembayaran</span>
+              <span class="receipt-val" id="receiptPaymentMethodText">QRIS Nasional</span>
+            </div>
+            <div class="receipt-row">
+              <span class="receipt-label">Waktu Transaksi</span>
+              <span class="receipt-val" id="receiptTimestampText">-</span>
+            </div>
+            <div class="receipt-row">
+              <span class="receipt-label">Akun Mahasiswa</span>
+              <span class="receipt-val" id="receiptUserEmailText">-</span>
+            </div>
+            <div class="receipt-row">
+              <span class="receipt-label">Masa Berlaku Akses</span>
+              <span class="receipt-val" id="receiptValidUntilText">90 Hari Kalender</span>
+            </div>
+            <div class="receipt-row">
+              <span class="receipt-label">Status Verifikasi</span>
+              <span class="receipt-val receipt-status-verified">Lunas (Otomatis)</span>
+            </div>
+          </div>
+
+          <div class="receipt-divider"></div>
+
+          <div class="receipt-total-row">
+            <span class="receipt-total-label">Total Pembayaran</span>
+            <strong class="receipt-total-amount" id="receiptTotalAmountText">Rp 55.500</strong>
+          </div>
+        </div>
+
+        <!-- Hak Akses Aktif -->
+        <div class="activated-features-card">
+          <h4 class="activated-title">Hak Akses yang Kini Aktif:</h4>
+          <div class="activated-grid">
+            <div class="activated-item">
+              <span class="activated-dot">&bull;</span>
+              <span>Penyimpanan Cloud Terpusat (Akses laptop & smartphone)</span>
+            </div>
+            <div class="activated-item">
+              <span class="activated-dot">&bull;</span>
+              <span>Dokumentasi Foto Lapangan dengan stempel koordinat GPS</span>
+            </div>
+            <div class="activated-item">
+              <span class="activated-dot">&bull;</span>
+              <span>Ekspor Dokumen Word (.docx) resmi dengan kop dan lembar pengesahan</span>
+            </div>
+            <div class="activated-item">
+              <span class="activated-dot">&bull;</span>
+              <span>Dukungan Multi-Wilayah (Kabupaten, Kecamatan, Desa) & Zona Waktu</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="success-actions-stack no-print">
+          <button type="button" class="btn btn-primary btn-block btn-lg" id="btnSuccessGoDashboard" data-route="/dashboard">
+            <span>Buka Dashboard Riset</span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+              <polyline points="12 5 19 12 12 19"></polyline>
+            </svg>
+          </button>
+
+          <button type="button" class="btn btn-outline-primary btn-block" id="btnSuccessGoProfile" data-route="/profile">
+            <span>Lengkapi Profil & Wilayah Riset</span>
+          </button>
+
+          <button type="button" class="btn btn-ghost btn-sm" id="btnSuccessPrintReceipt">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="6 9 6 2 18 2 18 9"></polyline>
+              <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+              <rect x="6" y="14" width="12" height="8"></rect>
+            </svg>
+            <span>Cetak / Simpan Bukti Pembayaran</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Dummy fallback container untuk modalPaywall (backward compatibility) -->
+  <div id="modalPaywall" class="hidden"></div>
+
+  <!-- ======================================================== -->
+  <!-- 4. MODAL: PROFIL RISET LENGKAP & HIRARKI WILAYAH WIZARD  -->
+  <!-- ======================================================== -->
+  <div id="modalProfile" class="modal-overlay hidden">
+    <div class="modal-sheet modal-sheet-large">
+      <div class="modal-header">
+        <div>
+          <h2 class="modal-title">Profil Penelitian dan Wilayah Riset</h2>
+          <p class="modal-subtitle">Acuan otomatis kop dokumen Word, lembar pengesahan pembimbing, dan pilihan wilayah</p>
+        </div>
+        <button class="btn-close-modal" id="btnCloseProfileModal">&times;</button>
+      </div>
+
+      <form id="formResearcherProfile" class="modal-body">
+        <!-- Bagian 1: Identitas Mahasiswa Peneliti -->
+        <div class="profile-section-card">
+          <h3 class="profile-section-title">Identitas Mahasiswa (Peneliti)</h3>
+          <p class="profile-section-desc">Identitas akademik peneliti untuk kop dokumen rekapitulasi kegiatan dan arsip resmi.</p>
+          
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label for="profName" class="form-label required">Nama Lengkap Mahasiswa</label>
+              <input type="text" id="profName" class="form-control" placeholder="Nama lengkap Anda" required>
+            </div>
+            <div class="form-group flex-1">
+              <label for="profNim" class="form-label required">NIM / Nomor Induk Mahasiswa</label>
+              <input type="text" id="profNim" class="form-control" placeholder="Nomor Induk Mahasiswa (NIM)" required>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label for="profUniversity" class="form-label required">Nama Universitas / Perguruan Tinggi</label>
+              <input type="text" id="profUniversity" class="form-control" placeholder="Nama universitas / perguruan tinggi" required>
+            </div>
+            <div class="form-group flex-1">
+              <label for="profMajor" class="form-label required">Fakultas / Program Studi</label>
+              <input type="text" id="profMajor" class="form-control" placeholder="Fakultas / program studi / jurusan" required>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bagian 2: Informasi Skripsi & Dosen Pembimbing -->
+        <div class="profile-section-card">
+          <h3 class="profile-section-title">Informasi Skripsi & Dosen Pembimbing</h3>
+          <p class="profile-section-desc">Judul penelitian skripsi dan data dosen pembimbing untuk lembar pengesahan resmi dokumen Word.</p>
+          
+          <div class="form-group">
+            <label for="profTopic" class="form-label required">Judul Skripsi / Topik Penelitian</label>
+            <textarea id="profTopic" rows="2" class="form-control" placeholder="Judul skripsi atau topik penelitian lapangan Anda..." required></textarea>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group flex-2">
+              <label for="profSupervisor" class="form-label required">Nama Dosen Pembimbing (Beserta Gelar)</label>
+              <input type="text" id="profSupervisor" class="form-control" placeholder="Contoh: Dr. Ir. Nama Pembimbing, M.Si." required>
+            </div>
+            <div class="form-group flex-1">
+              <label for="profSupervisorNip" class="form-label">NIP / NIDN Pembimbing</label>
+              <input type="text" id="profSupervisorNip" class="form-control" placeholder="Contoh: 19850101 201012 1 001">
+              <small class="form-hint">Opsional, dicantumkan pada kolom tanda tangan.</small>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bagian 3: Wilayah & Parameter Riset Lapangan -->
+        <div class="profile-section-card">
+          <h3 class="profile-section-title">Wilayah & Parameter Riset Lapangan</h3>
+          <p class="profile-section-desc">Pengaturan zona waktu wilayah riset dan daftar hirarki lokasi penelitian (kabupaten, kecamatan, desa).</p>
+
+          <div class="form-group" style="margin-bottom: 20px;">
+            <label class="form-label required">Zona Waktu Wilayah Riset</label>
+            <div class="timezone-radio-group">
+              <label class="timezone-radio-label">
+                <input type="radio" name="profTimezone" value="WIB">
+                <span>WIB (Waktu Indonesia Barat)</span>
+              </label>
+              <label class="timezone-radio-label">
+                <input type="radio" name="profTimezone" value="WITA" checked>
+                <span>WITA (Waktu Indonesia Tengah)</span>
+              </label>
+              <label class="timezone-radio-label">
+                <input type="radio" name="profTimezone" value="WIT">
+                <span>WIT (Waktu Indonesia Timur)</span>
+              </label>
+            </div>
+            <small class="form-hint">Digunakan untuk acuan stempel waktu otomatis dan keterangan jam pada rekapitulasi aktivitas.</small>
+          </div>
+
+          <div class="section-title-between" style="border-top: 1px dashed var(--color-slate-200); padding-top: 16px;">
+            <div>
+              <h4 style="font-size: 0.88rem; font-weight: 750; color: var(--color-slate-800); margin: 0 0 2px 0;">Daftar Wilayah Penelitian Terdaftar</h4>
+              <p style="font-size: 0.75rem; color: var(--color-slate-500); margin: 0;">Tambahkan cakupan Provinsi, Kabupaten, Kecamatan, Desa, dan Dusun (opsional).</p>
+            </div>
+            <button type="button" class="btn btn-outline-primary btn-sm" id="btnAddKabupatenBtn">
+              + Tambah Wilayah Penelitian
+            </button>
+          </div>
+
+          <!-- Tree Builder Wilayah -->
+          <div id="profileLocationsTree" class="locations-tree-container">
+            <!-- Diisi secara interaktif oleh profileManager.js -->
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-light" id="btnCancelProfile">Batal</button>
+          <button type="submit" class="btn btn-primary" id="btnSaveProfile">
+            <span>Simpan Profil Riset</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- 5. MODAL: FORM CATAT / EDIT LOGBOOK BARU                  -->
+  <!-- ======================================================== -->
+  <div id="modalForm" class="modal-overlay hidden">
+    <div class="modal-sheet modal-sheet-large">
+      <div class="modal-header">
+        <div>
+          <h2 class="modal-title" id="modalFormTitle">Catat Logbook Baru</h2>
+          <p class="modal-subtitle" id="modalFormSubtitle">Aktivitas Penelitian Lapangan</p>
+        </div>
+        <button class="btn-close-modal" id="btnCloseAddModal">&times;</button>
+      </div>
+
+      <form id="formAddLogbook" class="modal-body">
+        <!-- Wilayah Riset: Terdaftar vs Custom Luar Wilayah -->
+        <div class="form-group">
+          <div class="location-header-row">
+            <label class="form-label required">Wilayah Aktivitas Penelitian</label>
+            <label class="custom-location-toggle">
+              <input type="checkbox" id="checkCustomLocation">
+              <span>Lokasi di luar wilayah riset terdaftar</span>
+            </label>
+          </div>
+
+          <!-- Pilihan Wilayah dari Profil Terdaftar (Default) -->
+          <div id="sectionRegisteredLocation" class="form-row form-row-locations">
+            <div class="form-group flex-1">
+              <label for="selectKabupaten" class="form-label">Kabupaten / Kota</label>
+              <select id="selectKabupaten" class="form-control">
+                <option value="">Pilih Kabupaten...</option>
+              </select>
+            </div>
+            <div class="form-group flex-1">
+              <label for="selectKecamatan" class="form-label">Kecamatan</label>
+              <select id="selectKecamatan" class="form-control">
+                <option value="">Pilih Kecamatan...</option>
+              </select>
+            </div>
+            <div class="form-group flex-1">
+              <label for="selectDesa" class="form-label">Desa / Kelurahan</label>
+              <select id="selectDesa" class="form-control">
+                <option value="">Pilih Desa...</option>
+              </select>
+            </div>
+            <div class="form-group flex-1">
+              <label for="selectDusun" class="form-label">Dusun / Lingk. <span style="font-weight: normal; color: var(--color-slate-500);">(Opsional)</span></label>
+              <select id="selectDusun" class="form-control">
+                <option value="">Tanpa Dusun...</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Input Wilayah Bebas / Custom Manual (Jika Lokasi di Luar Profil) -->
+          <div id="sectionCustomLocation" class="form-row form-row-locations hidden">
+            <div class="form-group flex-1">
+              <label for="inputCustomKabupaten" class="form-label">Kabupaten / Kota</label>
+              <input type="text" id="inputCustomKabupaten" class="form-control" placeholder="Contoh: Kota Makassar">
+            </div>
+            <div class="form-group flex-1">
+              <label for="inputCustomKecamatan" class="form-label">Kecamatan</label>
+              <input type="text" id="inputCustomKecamatan" class="form-control" placeholder="Contoh: Tamalanrea">
+            </div>
+            <div class="form-group flex-1">
+              <label for="inputCustomDesa" class="form-label">Desa / Kelurahan</label>
+              <input type="text" id="inputCustomDesa" class="form-control" placeholder="Contoh: Bira">
+            </div>
+            <div class="form-group flex-1">
+              <label for="inputCustomDusun" class="form-label">Dusun / Lingk. <span style="font-weight: normal; color: var(--color-slate-500);">(Opsional)</span></label>
+              <input type="text" id="inputCustomDusun" class="form-control" placeholder="Opsional (contoh: Dusun A)">
+            </div>
+          </div>
+        </div>
+
+        <!-- Kategori Kegiatan (Preset Tersimpan & Custom) -->
+        <div class="form-group">
+          <div class="location-header-row">
+            <label for="selectActivityCategory" class="form-label required">Kategori Kegiatan</label>
+            <button type="button" class="btn-link-action" id="btnOpenManageCategories">Kelola Kategori</button>
+          </div>
+
+          <div class="category-select-wrapper">
+            <select id="selectActivityCategory" class="form-control flex-1" required>
+              <option value="">Pilih Kategori Kegiatan...</option>
+            </select>
+            <button type="button" class="btn btn-light btn-new-category-toggle" id="btnToggleNewCategoryForm" title="Ketik dan simpan kategori baru">
+              + Kategori Baru
+            </button>
+          </div>
+
+          <!-- Input Kategori Baru Cepat -->
+          <div id="quickNewCategoryArea" class="quick-new-category-box hidden">
+            <div class="form-row quick-cat-row" style="align-items: center; margin-bottom: 0;">
+              <input type="text" id="inputQuickNewCategoryName" class="form-control flex-1" placeholder="Ketik nama kategori kegiatan baru">
+              <button type="button" class="btn btn-primary btn-sm" id="btnSaveQuickNewCategory">Simpan & Pilih</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sasaran Responden -->
+        <div class="form-group" id="fieldResponden">
+          <label for="inputResponden" class="form-label">Nama Responden / Informan / Lembaga</label>
+          <input type="text" id="inputResponden" class="form-control" placeholder="Contoh: Tokoh Masyarakat / Narasumber Lapangan">
+        </div>
+
+        <!-- Tanggal & Waktu (Responsive Mobile-Friendly 2-Tier Layout) -->
+        <div class="form-row-datetime">
+          <div class="form-group datetime-col-date">
+            <label for="inputTanggal" class="form-label required">Tanggal Aktivitas</label>
+            <input type="date" id="inputTanggal" class="form-control" required>
+          </div>
+          <div class="datetime-subrow">
+            <div class="form-group datetime-col-time">
+              <label for="inputWaktuMulai" class="form-label required">Waktu Mulai (<span class="badge-timezone-text">WITA</span>)</label>
+              <input type="time" id="inputWaktuMulai" class="form-control" required>
+            </div>
+            <div class="form-group datetime-col-time">
+              <label for="inputWaktuSelesai" class="form-label required">Waktu Selesai (<span class="badge-timezone-text">WITA</span>)</label>
+              <input type="time" id="inputWaktuSelesai" class="form-control" required>
+            </div>
+          </div>
+        </div>
+
+        <!-- Deskripsi Kegiatan -->
+        <div class="form-group">
+          <label for="inputDeskripsi" class="form-label required">Uraian / Deskripsi Kegiatan</label>
+          <textarea id="inputDeskripsi" rows="3" class="form-control" placeholder="Tuliskan rincian hasil wawancara, temuan penting, observasi lapangan..." required></textarea>
+        </div>
+
+        <!-- Output / Capaian -->
+        <div class="form-group">
+          <label for="inputOutput" class="form-label required">Output / Capaian Kegiatan</label>
+          <input type="text" id="inputOutput" class="form-control" placeholder="Contoh: Transkrip wawancara 4 halaman dan data produktivitas lahan" required>
+        </div>
+
+        <!-- Unggah Foto Bukti Lapangan -->
+        <div class="form-group">
+          <label class="form-label">Foto Dokumentasi Lapangan (Kompatibel GPS Map Camera)</label>
+          <div class="photo-upload-zone" id="dropZone">
+            <input type="file" id="inputFoto" accept="image/*" class="file-input-hidden" style="display: none !important;">
+            <div class="upload-content-prompt" id="uploadPrompt">
+              <p>Pilih foto dokumentasi dari perangkat atau kamera</p>
+              <small>Foto akan dikompresi otomatis tanpa mengurangi keterbacaan koordinat</small>
+            </div>
+            <div class="photo-preview-wrapper hidden" id="photoPreviewContainer">
+              <img id="photoPreviewImg" src="" alt="Pratinjau Foto" />
+              <span class="photo-preview-badge">GPS Cam</span>
+              <button type="button" class="btn-remove-photo" id="btnRemovePhoto" title="Hapus foto" aria-label="Hapus Foto">&times;</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Rekaman Suara & Video Wawancara (Cloud Storage Terenkripsi) -->
+        <div class="form-section-media-box">
+          <div class="media-box-header">
+            <div>
+              <span class="media-box-title">Rekaman Suara &amp; Video Wawancara (Opsional)</span>
+              <p class="media-box-desc">
+                Cadangkan rekaman audio atau video sesi ini ke penyimpanan cloud secara aman dan terhubung dengan catatan logbook.
+              </p>
+            </div>
+            <span class="media-box-badge">Cloud Terenkripsi</span>
+          </div>
+
+          <div class="media-upload-grid">
+            <!-- 1. Input Rekaman Suara (Audio) -->
+            <div class="media-input-card">
+              <div class="media-input-header">
+                <span class="media-input-label">Rekaman Suara (Audio)</span>
+                <span class="media-input-formats">.mp3, .m4a, .wav, .aac</span>
+              </div>
+              <div class="media-file-picker">
+                <input type="file" id="inputAudioMedia" accept="audio/*,.mp3,.m4a,.wav,.aac,.ogg,.m4b" class="media-file-input-hidden" style="display: none !important;">
+                <button type="button" class="btn btn-outline-neutral btn-sm btn-pick-media" id="btnChooseAudioMedia">
+                  Pilih Berkas Audio
+                </button>
+                <div id="audioFileSelectedInfo" class="media-selected-info hidden">
+                  <div class="media-meta-inline">
+                    <span class="media-file-name" id="audioSelectedFileName">-</span>
+                    <span class="media-file-size" id="audioSelectedFileSize">-</span>
+                  </div>
+                  <button type="button" class="btn-clear-media" id="btnClearAudioMedia" title="Batalkan pilihan audio">&times;</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- 2. Input Video Wawancara -->
+            <div class="media-input-card">
+              <div class="media-input-header">
+                <span class="media-input-label">Video Wawancara</span>
+                <span class="media-input-formats">.mp4, .mov, .webm, .mkv</span>
+              </div>
+              <div class="media-file-picker">
+                <input type="file" id="inputVideoMedia" accept="video/*,.mp4,.mov,.webm,.mkv,.avi,.3gp" class="media-file-input-hidden" style="display: none !important;">
+                <button type="button" class="btn btn-outline-neutral btn-sm btn-pick-media" id="btnChooseVideoMedia">
+                  Pilih Berkas Video
+                </button>
+                <div id="videoFileSelectedInfo" class="media-selected-info hidden">
+                  <div class="media-meta-inline">
+                    <span class="media-file-name" id="videoSelectedFileName">-</span>
+                    <span class="media-file-size" id="videoSelectedFileSize">-</span>
+                  </div>
+                  <button type="button" class="btn-clear-media" id="btnClearVideoMedia" title="Batalkan pilihan video">&times;</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Media yang sudah tersimpan sebelumnya pada logbook ini (Khusus saat Edit) -->
+          <div id="existingLogbookMediaArea" class="existing-media-container hidden">
+            <span class="existing-media-label">Media yang Sudah Tersimpan di Cloud:</span>
+            <div id="existingLogbookMediaList" class="existing-media-list"></div>
+          </div>
+
+          <!-- Status Indikator Unggah Media -->
+          <div id="mediaUploadProgressArea" class="media-upload-progress-box hidden">
+            <span class="upload-progress-text" id="mediaUploadProgressText">Mengunggah rekaman ke penyimpanan cloud...</span>
+            <div class="progress-bar-track">
+              <div class="progress-bar-fill" id="mediaProgressBarFill" style="width: 100%;"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer logbook-modal-footer">
+          <button type="button" class="btn btn-light" id="btnCancelAdd">Batal</button>
+          <button type="submit" class="btn btn-primary" id="btnSubmitLogbook">
+            <span id="btnSubmitText">Simpan Catatan Lapangan</span>
+            <span class="spinner hidden" id="submitSpinner"></span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- 6. MODAL: KELOLA KATEGORI KEGIATAN TERDAFTAR              -->
+  <!-- ======================================================== -->
+  <div id="modalCategoryManager" class="modal-overlay hidden">
+    <div class="modal-sheet">
+      <div class="modal-header">
+        <div>
+          <h2 class="modal-title">Kelola Kategori Kegiatan</h2>
+          <p class="modal-subtitle">Daftar kategori kegiatan penelitian yang tersimpan</p>
+        </div>
+        <button class="btn-close-modal" id="btnCloseCatModal">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <!-- Form Tambah Kategori -->
+        <div style="display: flex; gap: 8px; margin-bottom: 16px;">
+          <input type="text" id="inputNewCategoryModal" class="form-control flex-1" placeholder="Tambah kategori baru...">
+          <button type="button" class="btn btn-primary btn-sm" id="btnAddNewCategoryModal">Tambah</button>
+        </div>
+
+        <!-- Daftar Kategori -->
+        <div class="category-list-container" id="categoryListContainer">
+          <!-- Diisi secara dinamis oleh categoryManager.js -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- 7. MODAL: EKSPOR DOKUMEN WORD (.DOCX)                    -->
+  <!-- ======================================================== -->
+  <div id="modalExport" class="modal-overlay hidden">
+    <div class="modal-sheet">
+      <div class="modal-header">
+        <div>
+          <h2 class="modal-title">Ekspor Dokumen Word (.docx)</h2>
+          <p class="modal-subtitle">Format tabel lanskap resmi dengan kop institusi dan lembar pengesahan</p>
+        </div>
+        <button class="btn-close-modal" id="btnCloseExportModal">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <!-- Pilihan Cakupan Wilayah Ekspor -->
+        <div class="form-group">
+          <label class="form-label">Cakupan Wilayah Ekspor</label>
+          <div class="export-options-grid" id="exportOptionsContainer">
+            <label class="export-opt-card active">
+              <input type="radio" name="exportScope" value="all" checked>
+              <span>Semua Wilayah</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Filter Kategori Ekspor Opsional -->
+        <div class="form-group">
+          <label for="exportCategoryFilter" class="form-label">Filter Kategori Kegiatan Tertentu</label>
+          <select id="exportCategoryFilter" class="form-control">
+            <option value="all">Semua Kategori Kegiatan</option>
+          </select>
+        </div>
+
+        <!-- Filter Tanggal Opsional -->
+        <div class="form-row">
+          <div class="form-group flex-1">
+            <label for="exportDateStart" class="form-label">Mulai Tanggal (Opsional)</label>
+            <input type="date" id="exportDateStart" class="form-control">
+          </div>
+          <div class="form-group flex-1">
+            <label for="exportDateEnd" class="form-label">Sampai Tanggal (Opsional)</label>
+            <input type="date" id="exportDateEnd" class="form-control">
+          </div>
+        </div>
+
+        <!-- Preview Estimasi Data -->
+        <div class="export-summary-box">
+          <div>
+            <div class="summary-title" id="exportSummaryCount">Memuat perkiraan data...</div>
+            <div class="summary-desc">Dokumen Word (.docx) dengan tabel bergaris rapi, landscape, dan lembar tanda tangan.</div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-light" id="btnCancelExport">Batal</button>
+          <button type="button" class="btn btn-primary" id="btnDownloadWordAction">
+            <span class="btn-text">Unduh File Word (.docx)</span>
+            <span class="spinner hidden" id="exportSpinner"></span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- 8. MODAL: LIGHTBOX FOTO DETAIL (FULL SCREEN)             -->
+  <!-- ======================================================== -->
+  <div id="modalLightbox" class="lightbox-overlay hidden">
+    <div class="lightbox-content">
+      <button class="lightbox-close" id="btnCloseLightbox">&times;</button>
+      <img id="lightboxImg" src="" alt="Detail Foto Bukti GPS Cam">
+      <div class="lightbox-caption" id="lightboxCaption">Dokumentasi Lapangan</div>
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- 9. MODAL: RESET KATA SANDI (FORGOT PASSWORD)             -->
+  <!-- ======================================================== -->
+  <div id="modalResetPassword" class="modal-overlay hidden">
+    <div class="modal-sheet" style="max-width: 440px;">
+      <div class="modal-header">
+        <div>
+          <h2 class="modal-title">Reset Kata Sandi</h2>
+          <p class="modal-subtitle">Tautan pemulihan akan dikirimkan ke alamat email Anda</p>
+        </div>
+        <button type="button" class="btn-close-modal" id="btnCloseResetPasswordModal">&times;</button>
+      </div>
+      <form id="formResetPassword" class="modal-body">
+        <div class="form-group">
+          <label for="inputResetEmail" class="form-label required">Alamat Email Terdaftar</label>
+          <input type="email" id="inputResetEmail" class="form-control" placeholder="nama@student.ac.id" required>
+          <small class="form-hint">Pastikan email aktif untuk menerima instruksi pembuatan sandi baru.</small>
+        </div>
+        <div class="modal-footer" style="padding: 14px 0 0; background: transparent; border-top: none;">
+          <button type="button" class="btn btn-light" id="btnCancelResetPassword">Batal</button>
+          <button type="submit" class="btn btn-primary" id="btnSubmitResetPassword">
+            <span id="btnSubmitResetText">Kirim Tautan Pemulihan</span>
+            <span class="spinner hidden" id="spinnerResetPassword"></span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- 10. MODAL: FORM KELOLA WILAYAH PENELITIAN (5 TINGKAT)     -->
+  <!-- ======================================================== -->
+  <div id="modalAddLocation" class="modal-overlay hidden" style="z-index: 1060;">
+    <div class="modal-sheet" style="max-width: 540px;">
+      <div class="modal-header">
+        <div>
+          <h2 class="modal-title" id="modalAddLocationTitle">Tambah Wilayah Penelitian</h2>
+          <p class="modal-subtitle" id="modalAddLocationSubtitle">Sesuaikan dengan kebutuhan riset Anda: Provinsi, Kabupaten, Kecamatan, Desa, atau Dusun (opsional)</p>
+        </div>
+        <button type="button" class="btn-close-modal" id="btnCloseAddLocationModal">&times;</button>
+      </div>
+
+      <form id="formAddLocationEntry" class="modal-body">
+        <input type="hidden" id="locContextMode" value="new">
+        <input type="hidden" id="locTargetKabIdx" value="">
+        <input type="hidden" id="locTargetKecIdx" value="">
+
+        <!-- Tingkat 1: Provinsi -->
+        <div class="form-group" id="groupLocProvinsi">
+          <label for="locInputProvinsi" class="form-label">1. Provinsi</label>
+          <select id="locInputProvinsi" class="form-control">
+            <option value="">Pilih Provinsi...</option>
+          </select>
+          <small class="form-hint">Standar 38 provinsi resmi Republik Indonesia.</small>
+        </div>
+
+        <!-- Tingkat 2: Kabupaten / Kota -->
+        <div class="form-group" id="groupLocKabupaten">
+          <label for="locInputKabupaten" class="form-label">2. Kabupaten / Kota</label>
+          <input type="text" id="locInputKabupaten" class="form-control" placeholder="Contoh: Kab. Luwu atau Kota Bandung">
+          <small class="form-hint">Ketik manual nama Kabupaten atau Kota penelitian Anda.</small>
+        </div>
+
+        <!-- Tingkat 3: Kecamatan -->
+        <div class="form-group" id="groupLocKecamatan">
+          <label for="locInputKecamatan" class="form-label">3. Kecamatan <span style="font-weight: normal; color: var(--color-slate-500);">(Opsional)</span></label>
+          <input type="text" id="locInputKecamatan" class="form-control" placeholder="Contoh: Suli Barat atau Coblong">
+        </div>
+
+        <!-- Tingkat 4: Desa / Kelurahan -->
+        <div class="form-group" id="groupLocDesa">
+          <label for="locInputDesa" class="form-label">4. Desa / Kelurahan <span style="font-weight: normal; color: var(--color-slate-500);">(Opsional)</span></label>
+          <input type="text" id="locInputDesa" class="form-control" placeholder="Contoh: Desa Abbanuange atau Kelurahan Atakkae">
+        </div>
+
+        <!-- Tingkat 5: Dusun / Lingkungan (Opsional) -->
+        <div class="form-group" id="groupLocDusun">
+          <label for="locInputDusun" class="form-label">5. Dusun / Lingkungan / RW-RT <span style="font-weight: normal; color: var(--color-slate-500);">(Opsional)</span></label>
+          <input type="text" id="locInputDusun" class="form-control" placeholder="Contoh: Dusun Salo Dua (Kosongkan jika tidak ada)">
+          <small class="form-hint">Opsional: Isi jika pengamatan lapangan Anda terfokus pada dusun tertentu.</small>
+        </div>
+
+        <div class="modal-footer" style="padding: 16px 0 0; background: transparent; border-top: 1px solid var(--color-slate-200); margin-top: 16px;">
+          <button type="button" class="btn btn-light" id="btnCancelAddLocation">Batal</button>
+          <button type="submit" class="btn btn-primary" id="btnSubmitAddLocation">
+            <span id="btnSubmitAddLocationText">Simpan Wilayah</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- 11. MODAL: DIALOG KONFIRMASI HAPUS WILAYAH (IN-APP)       -->
+  <!-- ======================================================== -->
+  <div id="modalConfirmDeleteLocation" class="modal-overlay hidden" style="z-index: 1070;">
+    <div class="modal-sheet" style="max-width: 440px;">
+      <div class="modal-header">
+        <div>
+          <h2 class="modal-title" id="deleteLocationModalTitle">Hapus Wilayah Penelitian</h2>
+          <p class="modal-subtitle">Tindakan ini akan memperbarui daftar hirarki riset Anda</p>
+        </div>
+        <button type="button" class="btn-close-modal" id="btnCloseConfirmDeleteModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p id="deleteLocationMessage" style="font-size: 0.88rem; color: var(--color-slate-700); line-height: 1.5; margin: 0 0 16px;">
+          Apakah Anda yakin ingin menghapus wilayah ini?
+        </p>
+        <div class="modal-footer" style="padding: 14px 0 0; background: transparent; border-top: 1px solid var(--color-slate-200);">
+          <button type="button" class="btn btn-light" id="btnCancelDeleteLocation">Batal</button>
+          <button type="button" class="btn btn-danger" id="btnExecuteDeleteLocation">Hapus Wilayah</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- 12. FLOATING BACKGROUND UPLOAD MANAGER WIDGET            -->
+  <!-- ======================================================== -->
+  <aside id="bgUploadWidget" class="bg-upload-widget hidden" aria-live="polite">
+    <div class="bg-upload-card" id="bgUploadCard">
+      <div class="bg-upload-header">
+        <div class="bg-upload-title-row">
+          <span class="bg-upload-cloud-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/>
+            </svg>
+          </span>
+          <div class="bg-upload-titles">
+            <span class="bg-upload-main-title">Unggah Media Riset</span>
+            <span class="bg-upload-sub-title" id="bgUploadTargetTitle">Logbook Lapangan</span>
+          </div>
+        </div>
+        <div class="bg-upload-actions">
+          <button type="button" class="btn-widget-icon" id="btnToggleMinimizeUploadWidget" title="Minimize / Expand" aria-label="Minimize / Expand">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </button>
+          <button type="button" class="btn-widget-icon btn-widget-close hidden" id="btnCloseUploadWidget" title="Tutup Notifikasi" aria-label="Tutup Notifikasi">&times;</button>
+        </div>
+      </div>
+
+      <div class="bg-upload-body" id="bgUploadBody">
+        <div class="bg-upload-file-info">
+          <span class="bg-upload-filename" id="bgUploadFileName">rekaman_wawancara.mp4</span>
+          <span class="bg-upload-status-badge" id="bgUploadStatusBadge">Mengunggah...</span>
+        </div>
+
+        <div class="bg-upload-progress-track">
+          <div class="bg-upload-progress-fill" id="bgUploadProgressBar" style="width: 0%;"></div>
+        </div>
+
+        <div class="bg-upload-meta-row">
+          <span class="bg-upload-bytes" id="bgUploadBytes">0 MB / 0 MB</span>
+          <span class="bg-upload-percent" id="bgUploadPercent">0%</span>
+        </div>
+
+        <div id="bgUploadErrorArea" class="bg-upload-error-area hidden">
+          <span class="bg-upload-error-msg" id="bgUploadErrorMsg">Unggahan gagal.</span>
+          <button type="button" class="btn btn-outline-danger btn-xs" id="btnRetryUpload">Coba Lagi</button>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- TOAST NOTIFIKASI -->
+  <div id="toastMessage" class="toast hidden"></div>
+
+  <!-- SCRIPTS BERURUTAN -->
+  <script src="js/universalLocations.js?v=20261010_53"></script>
+  <script src="js/firebaseConfig.js?v=20261010_53"></script>
+  <script src="js/profileManager.js?v=20261010_53"></script>
+  <script src="js/categoryManager.js?v=20261010_53"></script>
+  <script src="js/auth.js?v=20261010_53"></script>
+  <script src="js/config.js?v=20261010_53"></script>
+  <script src="js/docxExport.js?v=20261010_53"></script>
+  <script src="js/app.js?v=20261010_53"></script>
+</body>
+</html>
