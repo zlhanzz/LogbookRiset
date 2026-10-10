@@ -1381,6 +1381,48 @@
     }
   };
 
+  // Penanganan Cerdas Fallback Pemutaran & Pengunduhan Media Cloud (Zero Downtime Playback)
+  window.handleMediaPlaybackFallback = function(mediaEl) {
+    if (!mediaEl || mediaEl.dataset.hasSwitchedFallback === "1") return;
+    const fallbackUrl = mediaEl.getAttribute("data-fallback-url");
+    if (fallbackUrl) {
+      mediaEl.dataset.hasSwitchedFallback = "1";
+      while (mediaEl.firstChild) {
+        mediaEl.removeChild(mediaEl.firstChild);
+      }
+      mediaEl.src = fallbackUrl;
+      try {
+        mediaEl.load();
+      } catch (loadErr) {
+        console.warn("Gagal reload media fallback:", loadErr);
+      }
+    }
+  };
+
+  window.handleMediaDownloadClick = async function(event, linkEl) {
+    if (!linkEl) return;
+    const fallback = linkEl.getAttribute("data-fallback-download");
+    if (!fallback) return;
+
+    if (linkEl.dataset.switchedDownload !== "1") {
+      event.preventDefault();
+      try {
+        const checkRes = await fetch(linkEl.href, { method: "HEAD" });
+        const ct = checkRes.headers.get("content-type") || "";
+        if (checkRes.ok && !ct.includes("text/html")) {
+          linkEl.dataset.switchedDownload = "1";
+          window.location.href = linkEl.href;
+          return;
+        }
+      } catch (e) {
+        // Abaikan galat jaringan dan lanjut ke direct fallback
+      }
+      linkEl.dataset.switchedDownload = "1";
+      linkEl.href = fallback;
+      window.location.href = fallback;
+    }
+  };
+
   function renderMediaGallery() {
     if (!DOM.mediaCardsGrid) return;
 
@@ -1487,8 +1529,11 @@
       // Render daftar player media yang sesuai filter
       const playersHtml = mediaToShow.map(m => {
         const isVideo = m.file_type === "video" || (m.mime_type && m.mime_type.startsWith("video/"));
-        const streamUrl = m.stream_url || `/api/media/stream?file_id=${encodeURIComponent(m.file_id)}`;
-        const driveLink = m.web_view_link || `https://drive.google.com/file/d/${m.file_id}/view`;
+        const fileId = m.file_id || "";
+        const primaryStreamUrl = `/api/media/stream?file_id=${encodeURIComponent(fileId)}`;
+        const directFallbackUrl = fileId ? `https://drive.usercontent.google.com/download?id=${encodeURIComponent(fileId)}` : "";
+        const directDownloadFallback = fileId ? `https://drive.usercontent.google.com/download?id=${encodeURIComponent(fileId)}&export=download` : "";
+        const streamUrl = m.stream_url || primaryStreamUrl;
         const formattedSize = formatBytes(m.size);
 
         return `
@@ -1497,7 +1542,12 @@
               <span class="media-card-type-tag ${isVideo ? "video" : "audio"}">
                 ${isVideo ? "Video Wawancara" : "Rekaman Suara"}
               </span>
-              <a href="${streamUrl}&download=1&filename=${encodeURIComponent(m.file_name || "berkas")}" download="${escapeHtml(m.file_name || "berkas")}" class="btn-download-media-link" title="Unduh berkas ini ke perangkat">
+              <a href="${streamUrl}&download=1&filename=${encodeURIComponent(m.file_name || "berkas")}"
+                 data-fallback-download="${directDownloadFallback}"
+                 onclick="handleMediaDownloadClick(event, this)"
+                 download="${escapeHtml(m.file_name || "berkas")}"
+                 class="btn-download-media-link"
+                 title="Unduh berkas ini ke perangkat">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                   <polyline points="7 10 12 15 17 10"></polyline>
@@ -1509,13 +1559,15 @@
 
             <div class="media-player-wrapper">
               ${isVideo ? `
-                <video controls preload="metadata" playsinline>
+                <video controls preload="metadata" playsinline data-fallback-url="${directFallbackUrl}" onerror="handleMediaPlaybackFallback(this)">
                   <source src="${streamUrl}" type="${escapeHtml(m.mime_type || "video/mp4")}">
+                  ${directFallbackUrl ? `<source src="${directFallbackUrl}" type="${escapeHtml(m.mime_type || "video/mp4")}">` : ""}
                   Browser Anda tidak mendukung pemutar video HTML5.
                 </video>
               ` : `
-                <audio controls preload="none">
+                <audio controls preload="none" data-fallback-url="${directFallbackUrl}" onerror="handleMediaPlaybackFallback(this)">
                   <source src="${streamUrl}" type="${escapeHtml(m.mime_type || "audio/mpeg")}">
+                  ${directFallbackUrl ? `<source src="${directFallbackUrl}" type="${escapeHtml(m.mime_type || "audio/mpeg")}">` : ""}
                   Browser Anda tidak mendukung pemutar audio HTML5.
                 </audio>
               `}
@@ -1637,7 +1689,9 @@
 
     mediaList.forEach((m, idx) => {
       const isVideo = m.file_type === "video" || (m.mime_type && m.mime_type.startsWith("video/"));
-      const streamUrl = m.stream_url || `/api/media/stream?file_id=${encodeURIComponent(m.file_id)}`;
+      const fileId = m.file_id || "";
+      const streamUrl = m.stream_url || `/api/media/stream?file_id=${encodeURIComponent(fileId)}`;
+      const directDownloadFallback = fileId ? `https://drive.usercontent.google.com/download?id=${encodeURIComponent(fileId)}&export=download` : "";
       const sizeStr = formatBytes(m.size);
 
       const itemRow = document.createElement("div");
@@ -1653,7 +1707,13 @@
           <span style="font-size: 0.7rem; color: #64748b;">(${sizeStr})</span>
         </div>
         <div style="display: flex; align-items: center; gap: 6px;">
-          <a href="${streamUrl}&download=1&filename=${encodeURIComponent(m.file_name)}" download="${escapeHtml(m.file_name)}" class="btn btn-sm btn-light" style="font-size: 0.72rem; padding: 2px 8px;" title="Unduh berkas ini">Unduh</a>
+          <a href="${streamUrl}&download=1&filename=${encodeURIComponent(m.file_name)}"
+             data-fallback-download="${directDownloadFallback}"
+             onclick="handleMediaDownloadClick(event, this)"
+             download="${escapeHtml(m.file_name)}"
+             class="btn btn-sm btn-light"
+             style="font-size: 0.72rem; padding: 2px 8px;"
+             title="Unduh berkas ini">Unduh</a>
           <button type="button" class="btn btn-sm btn-outline-danger btn-remove-existing-media" data-media-idx="${idx}" style="font-size: 0.72rem; padding: 2px 8px;" title="Hapus media ini dari logbook">Hapus</button>
         </div>
       `;

@@ -187,6 +187,8 @@ const server = http.createServer(async (req, res) => {
       }
       if (isDownload) {
         headers['Content-Disposition'] = `attachment; filename="${encodeURIComponent(downloadFileName)}"`;
+      } else {
+        headers['Content-Disposition'] = 'inline';
       }
 
       res.writeHead(200, headers);
