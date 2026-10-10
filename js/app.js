@@ -627,6 +627,9 @@
     updateSubscriptionBadgeUI();
     renderHeaderUserProfile(user, window.ProfileManager ? ProfileManager.currentProfile : null);
     await loadEntries(user);
+    if (window.CategoryManager && state.entries && state.entries.length > 0) {
+      CategoryManager.syncFromEntries(state.entries, user);
+    }
     refreshFormLocations();
     refreshCategoryDropdowns();
 
@@ -2200,6 +2203,7 @@
         order_id: state.currentPaymentOrder.orderId
       });
 
+      const resp = await fetch(`/api/payment/status?${q.toString()}`);
       let data;
       try {
         data = await resp.json();
@@ -2425,6 +2429,15 @@
     if (DOM.existingLogbookMediaList) DOM.existingLogbookMediaList.innerHTML = "";
     if (DOM.mediaUploadProgressArea) DOM.mediaUploadProgressArea.classList.add("hidden");
 
+    // Persiapan Kategori Kegiatan Progresif
+    refreshCategoryDropdowns();
+    const cats = window.CategoryManager ? CategoryManager.getCategories() : [];
+    if (cats.length === 0) {
+      if (DOM.quickNewCategoryArea) DOM.quickNewCategoryArea.classList.remove("hidden");
+    } else {
+      if (DOM.quickNewCategoryArea) DOM.quickNewCategoryArea.classList.add("hidden");
+    }
+
     if (DOM.modalForm) DOM.modalForm.classList.remove("hidden");
   }
 
@@ -2528,6 +2541,8 @@
     if (DOM.videoFileSelectedInfo) DOM.videoFileSelectedInfo.classList.add("hidden");
     if (DOM.btnChooseAudioMedia) DOM.btnChooseAudioMedia.classList.remove("hidden");
     if (DOM.btnChooseVideoMedia) DOM.btnChooseVideoMedia.classList.remove("hidden");
+    if (DOM.quickNewCategoryArea) DOM.quickNewCategoryArea.classList.add("hidden");
+    if (DOM.inputQuickNewCategoryName) DOM.inputQuickNewCategoryName.value = "";
     if (DOM.existingLogbookMediaArea) DOM.existingLogbookMediaArea.classList.add("hidden");
     if (DOM.existingLogbookMediaList) DOM.existingLogbookMediaList.innerHTML = "";
     if (DOM.mediaUploadProgressArea) DOM.mediaUploadProgressArea.classList.add("hidden");
@@ -2672,13 +2687,27 @@
     // Dropdown Form Tambah
     if (DOM.selectActivityCategory) {
       const currentVal = DOM.selectActivityCategory.value;
-      DOM.selectActivityCategory.innerHTML = '<option value="">Pilih Kategori Kegiatan...</option>';
-      cats.forEach(c => {
-        const opt = document.createElement("option");
-        opt.value = c;
-        opt.textContent = c;
-        DOM.selectActivityCategory.appendChild(opt);
-      });
+      DOM.selectActivityCategory.innerHTML = "";
+
+      if (cats.length === 0) {
+        DOM.selectActivityCategory.innerHTML = `
+          <option value="">Belum ada kategori tersimpan...</option>
+          <option value="__NEW__">+ Ketik Kategori Baru...</option>
+        `;
+      } else {
+        DOM.selectActivityCategory.innerHTML = '<option value="">Pilih Kategori Kegiatan...</option>';
+        cats.forEach(c => {
+          const opt = document.createElement("option");
+          opt.value = c;
+          opt.textContent = c;
+          DOM.selectActivityCategory.appendChild(opt);
+        });
+        const newOpt = document.createElement("option");
+        newOpt.value = "__NEW__";
+        newOpt.textContent = "+ Ketik Kategori Baru Lainnya...";
+        DOM.selectActivityCategory.appendChild(newOpt);
+      }
+
       if (currentVal && cats.includes(currentVal)) {
         DOM.selectActivityCategory.value = currentVal;
       }
@@ -2686,6 +2715,7 @@
 
     // Dropdown Filter Dashboard
     if (DOM.filterKategoriSelect) {
+      const currentFilter = DOM.filterKategoriSelect.value;
       DOM.filterKategoriSelect.innerHTML = '<option value="all">Semua Jenis Kegiatan</option>';
       cats.forEach(c => {
         const opt = document.createElement("option");
@@ -2693,10 +2723,14 @@
         opt.textContent = c;
         DOM.filterKategoriSelect.appendChild(opt);
       });
+      if (currentFilter && (currentFilter === "all" || cats.includes(currentFilter))) {
+        DOM.filterKategoriSelect.value = currentFilter;
+      }
     }
 
     // Dropdown Filter Ekspor Word
     if (DOM.exportCategoryFilter) {
+      const currentExportCat = DOM.exportCategoryFilter.value;
       DOM.exportCategoryFilter.innerHTML = '<option value="all">Semua Kategori Kegiatan</option>';
       cats.forEach(c => {
         const opt = document.createElement("option");
@@ -2704,6 +2738,9 @@
         opt.textContent = c;
         DOM.exportCategoryFilter.appendChild(opt);
       });
+      if (currentExportCat && (currentExportCat === "all" || cats.includes(currentExportCat))) {
+        DOM.exportCategoryFilter.value = currentExportCat;
+      }
     }
   }
 
@@ -2863,6 +2900,13 @@
       }
 
       saveEntriesToLocalStorage(state.entries, user);
+
+      // Progresif & adaptif: otomatis daftarkan kategori kegiatan ke CategoryManager
+      if (window.CategoryManager && jenisKegiatan) {
+        await CategoryManager.addCategory(jenisKegiatan, user);
+        refreshCategoryDropdowns();
+      }
+
       closeFormModal();
       updateDashboard();
       updateWorkspaceNavCounts();
@@ -4089,6 +4133,20 @@
           if (!DOM.quickNewCategoryArea.classList.contains("hidden") && DOM.inputQuickNewCategoryName) {
             DOM.inputQuickNewCategoryName.focus();
           }
+        }
+      });
+    }
+
+    if (DOM.selectActivityCategory) {
+      DOM.selectActivityCategory.addEventListener("change", (e) => {
+        if (e.target.value === "__NEW__") {
+          if (DOM.quickNewCategoryArea) {
+            DOM.quickNewCategoryArea.classList.remove("hidden");
+            if (DOM.inputQuickNewCategoryName) {
+              DOM.inputQuickNewCategoryName.focus();
+            }
+          }
+          e.target.value = "";
         }
       });
     }

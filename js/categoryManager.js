@@ -1,36 +1,68 @@
 /**
  * ============================================================================
- * MODUL MANAJEMEN KATEGORI KEGIATAN FLEKSIBEL (CATEGORY MANAGER)
- * Mengelola Preset Kategori Kegiatan Riset yang Dapat Disimpan, Diedit,
- * dan Ditautkan ke Entri Logbook Riwayat Lama
+ * MODUL MANAJEMEN KATEGORI KEGIATAN PROGRESIF & ADAPTIF (CATEGORY MANAGER)
+ * Mengelola kategori kegiatan riset secara dinamis berdasarkan input riil pengguna.
+ * Bebas dari preset statis/hardcoded; pilihan bertambah adaptif seiring aktivitas pengguna.
+ * Menjamin isolasi penuh: data contoh / simulasi (dummy) TIDAK PERNAH mencemari kategori.
  * ============================================================================
  */
 
 const CategoryManager = {
   categories: [],
 
-  defaultCategories: [
+  // Bersih dari default hardcoded: kategori murni bertambah secara progresif sesuai penggunaan riil
+  defaultCategories: [],
+
+  // Daftar kategori sampel dummy yang harus dibersihkan jika tidak digunakan oleh logbook riil
+  KNOWN_SAMPLE_DUMMY_CATEGORIES: [
+    "Wawancara Informan Kunci",
     "Wawancara Petani Responden",
+    "Observasi Lapangan & Perkebunan",
     "Wawancara Informan Kunci / Tokoh",
     "Wawancara Pedagang Pengumpul / Lembaga",
-    "Observasi Lapangan & Perkebunan",
     "Diskusi Terfokus (FGD) / Musyawarah Desa",
     "Dokumentasi & Koordinasi Aparat Desa"
   ],
 
   resetCategories() {
-    this.categories = [...this.defaultCategories];
+    this.categories = [];
   },
 
   getStorageKey(uid) {
-    if (!uid) return null;
-    return `LOGBOOK_SAVED_CATEGORIES_V3_${uid}`;
+    if (!uid) return "LOGBOOK_SAVED_CATEGORIES_PROGRESSIVE_GUEST";
+    return `LOGBOOK_SAVED_CATEGORIES_V5_${uid}`;
   },
 
   /**
-   * Inisialisasi daftar kategori dengan isolasi ketat per UID
+   * Membersihkan kategori sampel dummy jika pengguna belum memiliki catatan logbook riil
    */
-  async init(user) {
+  purgeSampleCategoriesIfNoRealEntries(entries, user) {
+    const realEntries = (entries || []).filter(e => e && !e.isDummy && !String(e.id || "").startsWith("dummy_"));
+    const realUsedCats = new Set(realEntries.map(e => String(e.jenisKegiatan || "").trim().toLowerCase()));
+
+    const beforeCount = this.categories.length;
+    this.categories = this.categories.filter(cat => {
+      const isSample = this.KNOWN_SAMPLE_DUMMY_CATEGORIES.some(s => s.toLowerCase() === cat.toLowerCase());
+      if (isSample) {
+        // Hanya pertahankan jika benar-benar ada catatan lapangan riil pengguna yang menggunakannya
+        return realUsedCats.has(cat.toLowerCase());
+      }
+      return true; // Kategori kustom buatan pengguna sendiri selalu dipertahankan
+    });
+
+    if (this.categories.length !== beforeCount) {
+      const activeUid = user ? user.uid : null;
+      this.saveToCache(activeUid);
+      if (user && !user.isDemo) {
+        this.saveToFirestore(user.uid, this.categories);
+      }
+    }
+  },
+
+  /**
+   * Inisialisasi daftar kategori dengan isolasi ketat per UID pengguna
+   */
+  async init(user, existingEntries) {
     const uid = user ? user.uid : null;
     this.loadFromCache(uid);
 
@@ -45,17 +77,53 @@ const CategoryManager = {
 
         if (docSnap.exists) {
           const data = docSnap.data();
-          if (Array.isArray(data.list) && data.list.length > 0) {
-            this.categories = data.list;
+          if (Array.isArray(data.list)) {
+            // Ambil kategori tersimpan pengguna tanpa memaksakan default
+            this.categories = data.list.filter(Boolean);
             this.saveToCache(uid);
           }
-        } else {
-          // Simpan default categories pertama kali
-          await this.saveToFirestore(user.uid, this.categories);
-          this.saveToCache(uid);
         }
       } catch (e) {
         console.warn("Gagal memuat kategori dari Firestore:", e.message);
+      }
+    }
+
+    // Pembersihan & adaptasi progresif
+    if (Array.isArray(existingEntries)) {
+      this.syncFromEntries(existingEntries, user);
+    } else {
+      this.purgeSampleCategoriesIfNoRealEntries([], user);
+    }
+
+    return this.categories;
+  },
+
+  /**
+   * Menyerap secara adaptif seluruh jenis kegiatan dari entri logbook riil pengguna (Bebas Dummy)
+   */
+  syncFromEntries(entries, user) {
+    if (!Array.isArray(entries)) return this.categories;
+
+    // Bersihkan kategori dummy warisan jika belum ada entri riil
+    this.purgeSampleCategoriesIfNoRealEntries(entries, user);
+
+    let added = false;
+    entries.forEach(entry => {
+      // DILARANG KERAS menyerap jenis kegiatan dari data contoh / dummy / simulasi
+      if (!entry || entry.isDummy || String(entry.id || "").startsWith("dummy_")) return;
+
+      const cat = String(entry.jenisKegiatan || "").trim();
+      if (cat && !this.categories.some(c => c.toLowerCase() === cat.toLowerCase())) {
+        this.categories.push(cat);
+        added = true;
+      }
+    });
+
+    if (added) {
+      const activeUid = user ? user.uid : null;
+      this.saveToCache(activeUid);
+      if (user && !user.isDemo) {
+        this.saveToFirestore(user.uid, this.categories);
       }
     }
 
@@ -72,26 +140,27 @@ const CategoryManager = {
       const saved = key ? localStorage.getItem(key) : null;
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          this.categories = parsed;
+        if (Array.isArray(parsed)) {
+          this.categories = parsed.filter(Boolean);
           return;
         }
       }
-      this.categories = [...this.defaultCategories];
+      this.categories = [];
     } catch (e) {
-      this.categories = [...this.defaultCategories];
+      this.categories = [];
     }
   },
 
   saveToCache(uid) {
     const activeUid = uid || (window.AuthManager && AuthManager.currentUser ? AuthManager.currentUser.uid : null);
-    if (!activeUid) return;
     try {
       const key = this.getStorageKey(activeUid);
       if (key) {
         localStorage.setItem(key, JSON.stringify(this.categories));
       }
+      // Bersihkan cache legacy versi sebelumnya agar tidak memunculkan kategori warisan
       localStorage.removeItem("LOGBOOK_SAVED_CATEGORIES_V3");
+      localStorage.removeItem("LOGBOOK_SAVED_CATEGORIES_V4_" + activeUid);
     } catch (e) {
       console.warn("Gagal menyimpan cache kategori:", e);
     }
@@ -105,7 +174,7 @@ const CategoryManager = {
         .doc(uid)
         .collection("meta")
         .doc("categories")
-        .set({ list, updatedAt: new Date().toISOString() }, { merge: true });
+        .set({ list: list || [], updatedAt: new Date().toISOString() }, { merge: true });
     } catch (e) {
       console.warn("Gagal menyimpan kategori ke Firestore:", e);
     }
@@ -119,7 +188,7 @@ const CategoryManager = {
   },
 
   /**
-   * Tambah & simpan kategori baru
+   * Tambah & simpan kategori baru ke memori, cache, dan Firestore
    */
   async addCategory(name, user) {
     const cleanName = String(name || "").trim();
@@ -158,7 +227,7 @@ const CategoryManager = {
     let updatedCount = 0;
     if (Array.isArray(allEntries)) {
       allEntries.forEach(entry => {
-        if (entry && entry.jenisKegiatan && entry.jenisKegiatan.toLowerCase() === cleanOld.toLowerCase()) {
+        if (entry && !entry.isDummy && entry.jenisKegiatan && entry.jenisKegiatan.toLowerCase() === cleanOld.toLowerCase()) {
           entry.jenisKegiatan = cleanNew;
           updatedCount++;
         }
@@ -181,7 +250,7 @@ const CategoryManager = {
   },
 
   /**
-   * Render daftar kategori ke DOM kontainer
+   * Render daftar kategori ke DOM kontainer modal kelola kategori
    */
   renderManager(container, onEditCategory, onDeleteCategory) {
     if (!container) return;
@@ -189,7 +258,16 @@ const CategoryManager = {
 
     const cats = this.getCategories();
     if (cats.length === 0) {
-      container.innerHTML = `<p style="color: var(--color-slate-400); font-size: 0.82rem; text-align: center; padding: 16px;">Belum ada kategori kegiatan tersimpan.</p>`;
+      container.innerHTML = `
+        <div style="text-align: center; padding: 24px 16px; color: var(--color-slate-500);">
+          <p style="font-size: 0.85rem; font-weight: 600; color: var(--color-slate-600); margin-bottom: 4px;">
+            Belum Ada Kategori Kegiatan Tersimpan
+          </p>
+          <p style="font-size: 0.76rem; color: var(--color-slate-400); margin: 0; line-height: 1.4;">
+            Kategori akan bertambah secara progresif dan adaptif setiap kali Anda menginput catatan lapangan baru, atau menambahkan kategori kustom secara manual di formulir logbook.
+          </p>
+        </div>
+      `;
       return;
     }
 
