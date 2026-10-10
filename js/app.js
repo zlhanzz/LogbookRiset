@@ -59,12 +59,18 @@
     // Halaman Khusus Koleksi Rekaman & Video Wawancara (Route: /media)
     viewMediaGallery: document.getElementById("viewMediaGallery"),
     btnMediaOpenAddLogbook: document.getElementById("btnMediaOpenAddLogbook"),
-    btnMediaBackToDashboard: document.getElementById("btnMediaBackToDashboard"),
+    btnMediaBackToDashboard: null,
     statMediaTotalCount: document.getElementById("statMediaTotalCount"),
     statMediaAudioCount: document.getElementById("statMediaAudioCount"),
     statMediaVideoCount: document.getElementById("statMediaVideoCount"),
     statMediaSessionsCount: document.getElementById("statMediaSessionsCount"),
     inputSearchMedia: document.getElementById("inputSearchMedia"),
+    filterMediaTypeSelect: document.getElementById("filterMediaTypeSelect"),
+    mediaFilterDropdownContainer: document.getElementById("mediaFilterDropdownContainer"),
+    btnMediaDropdownTrigger: document.getElementById("btnMediaDropdownTrigger"),
+    mediaDropdownSelectedIcon: document.getElementById("mediaDropdownSelectedIcon"),
+    mediaDropdownSelectedLabel: document.getElementById("mediaDropdownSelectedLabel"),
+    mediaDropdownMenu: document.getElementById("mediaDropdownMenu"),
     mediaCardsGrid: document.getElementById("mediaCardsGrid"),
     mediaEmptyState: document.getElementById("mediaEmptyState"),
     btnEmptyGoAddLogbook: document.getElementById("btnEmptyGoAddLogbook"),
@@ -151,7 +157,7 @@
     filteredCountBadge: document.getElementById("filteredCountBadge"),
     btnOpenAddModal: document.getElementById("btnOpenAddModal"),
     btnOpenExportModal: document.getElementById("btnOpenExportModal"),
-    btnRefreshSync: document.getElementById("btnRefreshSync"),
+    btnRefreshSync: null,
 
     // Portal Checkout & Saluran Pembayaran (Route: /checkout)
     checkoutChannelSelection: document.getElementById("checkoutChannelSelection"),
@@ -1017,11 +1023,13 @@
       ].filter(Boolean);
       const locDetailStr = locDetailParts.length > 0 ? locDetailParts.join(" &bull; ") : "-";
 
+      // Judul Sesi / Responden
+      const respondentTitle = item.sasaranResponden ? escapeHtml(item.sasaranResponden) : "Sesi Aktivitas Lapangan";
+
       card.innerHTML = `
-        <div class="card-header">
-          <div class="card-location">
-            <span class="location-badge ${kabBadgeClass}">${escapeHtml(displayKab)}</span>
-            <span class="location-detail">${locDetailStr}</span>
+        <div class="card-top-bar">
+          <div class="card-top-badges">
+            <span class="activity-badge badge-interview">${escapeHtml(item.jenisKegiatan || "Aktivitas Lapangan")}</span>
             ${mediaBadgeHtml}
             ${item.isDummy ? `<span class="badge-dummy-data">Data Contoh</span>` : ""}
           </div>
@@ -1035,18 +1043,25 @@
           </div>
         </div>
 
-        <div class="card-meta">
-          <span class="meta-date">${formatDateIndo(item.tanggal)}</span>
-          <span class="meta-time">${escapeHtml(item.waktuMulai || "-")} - ${escapeHtml(item.waktuSelesai || "-")} ${profileTz}</span>
+        <div class="card-respondent-row">
+          <h3 class="card-respondent-title">${respondentTitle}</h3>
+          <div class="card-datetime-badge">
+            <span class="meta-date">${formatDateIndo(item.tanggal)}</span>
+            <span class="meta-time-dot">&bull;</span>
+            <span class="meta-time">${escapeHtml(item.waktuMulai || "-")} - ${escapeHtml(item.waktuSelesai || "-")} ${profileTz}</span>
+          </div>
+        </div>
+
+        <div class="card-location-row">
+          <svg class="location-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+            <circle cx="12" cy="10" r="3"></circle>
+          </svg>
+          <span class="card-location-text"><strong class="location-kab-text ${kabBadgeClass}">${escapeHtml(displayKab)}</strong> &bull; ${locDetailStr}</span>
         </div>
 
         <div class="card-main-layout ${hasPhoto ? "has-side-photo" : ""}">
           <div class="card-text-col">
-            <div class="card-activity-type">
-              <span class="activity-badge badge-interview">${escapeHtml(item.jenisKegiatan || "-")}</span>
-              ${item.sasaranResponden ? `<span class="respondent-info">Responden: <strong>${escapeHtml(item.sasaranResponden)}</strong></span>` : ""}
-            </div>
-
             <div class="card-body-content">
               <p class="card-desc">${escapeHtml(item.deskripsi || "-")}</p>
               
@@ -4148,14 +4163,113 @@
       });
     }
 
-    document.querySelectorAll(".media-pill").forEach(pill => {
-      pill.addEventListener("click", function () {
-        document.querySelectorAll(".media-pill").forEach(p => p.classList.remove("active"));
-        this.classList.add("active");
-        state.mediaFilterType = this.dataset.mediaFilter || "all";
+    // Filter Format Media (Custom Industrial Popover Dropdown)
+    function setupMediaFilterDropdown() {
+      const container = DOM.mediaFilterDropdownContainer;
+      const trigger = DOM.btnMediaDropdownTrigger;
+      const menu = DOM.mediaDropdownMenu;
+      const label = DOM.mediaDropdownSelectedLabel;
+      const iconContainer = DOM.mediaDropdownSelectedIcon;
+      const nativeSelect = DOM.filterMediaTypeSelect;
+
+      if (!container || !trigger || !menu) return;
+
+      const mediaIcons = {
+        all: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>`,
+        audio: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>`,
+        video: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>`
+      };
+
+      const mediaLabels = {
+        all: "Semua Format Media",
+        audio: "Rekaman Suara",
+        video: "Video Wawancara"
+      };
+
+      function openDropdown() {
+        menu.classList.remove("hidden");
+        trigger.classList.add("open");
+        trigger.setAttribute("aria-expanded", "true");
+      }
+
+      function closeDropdown() {
+        menu.classList.add("hidden");
+        trigger.classList.remove("open");
+        trigger.setAttribute("aria-expanded", "false");
+      }
+
+      function selectOption(val) {
+        state.mediaFilterType = val || "all";
+
+        // Perbarui UI Trigger
+        if (label) label.textContent = mediaLabels[val] || mediaLabels.all;
+        if (iconContainer) iconContainer.innerHTML = mediaIcons[val] || mediaIcons.all;
+
+        // Perbarui status aktif item di menu
+        const items = menu.querySelectorAll(".dropdown-menu-item");
+        items.forEach(btn => {
+          const itemVal = btn.dataset.value;
+          const isSelected = itemVal === val;
+          btn.classList.toggle("active", isSelected);
+          btn.setAttribute("aria-selected", isSelected ? "true" : "false");
+          const checkIcon = btn.querySelector(".item-check");
+          if (checkIcon) {
+            checkIcon.classList.toggle("hidden", !isSelected);
+          }
+        });
+
+        // Sinkronisasi native select
+        if (nativeSelect && nativeSelect.value !== val) {
+          nativeSelect.value = val;
+        }
+
+        closeDropdown();
         renderMediaGallery();
+      }
+
+      // Event listener klik tombol trigger
+      trigger.addEventListener("click", function (e) {
+        e.stopPropagation();
+        const isOpen = !menu.classList.contains("hidden");
+        if (isOpen) {
+          closeDropdown();
+        } else {
+          openDropdown();
+        }
       });
-    });
+
+      // Event listener pemilihan opsi item
+      menu.addEventListener("click", function (e) {
+        const item = e.target.closest(".dropdown-menu-item");
+        if (!item) return;
+        e.stopPropagation();
+        const val = item.dataset.value || "all";
+        selectOption(val);
+      });
+
+      // Click outside listener untuk menutup dropdown secara mulus
+      document.addEventListener("click", function (e) {
+        if (!container.contains(e.target)) {
+          closeDropdown();
+        }
+      });
+
+      // Keyboard Esc listener
+      document.addEventListener("keydown", function (e) {
+        if (e.key === "Escape" && !menu.classList.contains("hidden")) {
+          closeDropdown();
+          trigger.focus();
+        }
+      });
+
+      // Fallback sinkronisasi jika native select berubah dari luar
+      if (DOM.filterMediaTypeSelect) {
+        DOM.filterMediaTypeSelect.addEventListener("change", function () {
+          selectOption(this.value);
+        });
+      }
+    }
+    setupMediaFilterDropdown();
 
     // Delegasi Klik Tombol "Lacak Catatan Logbook" pada Galeri Media
     if (DOM.mediaCardsGrid) {

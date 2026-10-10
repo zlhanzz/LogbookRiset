@@ -813,7 +813,88 @@ body {
   transform: translateY(-2px);
 }
 
-/* Card Header (Meta & Actions) */
+/* Card Top Bar (Badges & Actions) */
+.card-top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px dashed var(--color-slate-200);
+}
+
+.card-top-badges {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+/* Card Respondent & Session Title Row */
+.card-respondent-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.card-respondent-title {
+  margin: 0;
+  font-size: 0.98rem;
+  font-weight: 750;
+  color: var(--color-slate-900);
+  line-height: 1.35;
+}
+
+.card-datetime-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--color-slate-50);
+  border: 1px solid var(--color-slate-200);
+  padding: 3px 8px;
+  border-radius: var(--radius-sm, 6px);
+  font-size: 0.78rem;
+}
+
+.meta-time-dot {
+  color: var(--color-slate-400);
+}
+
+/* Card Location Row with SVG Pin */
+.card-location-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  color: var(--color-slate-600);
+  line-height: 1.4;
+}
+
+.card-location-row .location-icon {
+  flex-shrink: 0;
+  color: var(--color-primary, #064e3b);
+}
+
+.card-location-text {
+  word-break: break-word;
+}
+
+.location-kab-text {
+  color: var(--color-slate-900);
+  font-weight: 700;
+}
+
+.location-kab-text.wajo {
+  color: #92400e;
+}
+
+.location-kab-text.luwu {
+  color: #0369a1;
+}
+
+/* Legacy Card Header & Meta (Backward Compatibility) */
 .card-header {
   display: flex;
   align-items: center;
@@ -1105,9 +1186,167 @@ body {
 }
 
 @media (max-width: 640px) {
+  /* BARIS AKSI MOBILE (2 TOMBOL SEIMBANG 50/50 DENGAN TOUCH TARGET 44PX) */
+  .action-bar {
+    display: flex;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .action-bar .btn {
+    flex: 1 1 0%;
+    min-height: 44px;
+    padding: 10px 8px;
+    font-size: 0.84rem;
+    font-weight: 700;
+    border-radius: var(--radius-sm, 6px);
+    justify-content: center;
+    text-align: center;
+  }
+
+  .action-bar .btn svg {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+  }
+
+  .action-bar .btn span {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* TAB NAVIGASI RUANG KERJA MOBILE (ANTI-MELIPAT 3 BARIS) */
+  .app-workspace-nav {
+    display: flex;
+    gap: 6px;
+    width: 100%;
+    margin-bottom: 16px;
+  }
+
+  .workspace-nav-tab {
+    flex: 1 1 0%;
+    justify-content: center;
+    padding: 10px 6px;
+    font-size: 0.82rem;
+    text-align: center;
+    border-radius: var(--radius-sm, 6px) var(--radius-sm, 6px) 0 0;
+  }
+
+  .nav-tab-label-full {
+    display: none !important;
+  }
+
+  .nav-tab-label-short {
+    display: inline !important;
+  }
+
+  .nav-count-badge {
+    padding: 2px 6px;
+    font-size: 0.7rem;
+  }
+
+  /* FILTER & SEARCH MOBILE (STANDAR 16PX CEGAH AUTO-ZOOM IOS SAFARI) */
+  .search-box input {
+    font-size: 16px !important;
+    min-height: 44px;
+    padding: 10px 36px 10px 38px;
+  }
+
+  .filter-controls {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .filter-pills {
+    display: flex;
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding: 3px;
+    gap: 4px;
+  }
+
+  .filter-pills::-webkit-scrollbar {
+    display: none;
+  }
+
+  .pill-btn {
+    white-space: nowrap;
+    flex-shrink: 0;
+    padding: 7px 12px;
+    font-size: 0.8rem;
+    min-height: 36px;
+  }
+
+  .filter-select-wrapper {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .filter-select {
+    width: 100%;
+    font-size: 16px !important;
+    min-height: 44px;
+    padding: 8px 12px;
+  }
+
+  /* KARTU LOGBOOK CATATAN LAPANGAN MOBILE */
+  .logbook-card {
+    padding: 14px 14px;
+    gap: 10px;
+    border-radius: var(--radius-md, 8px);
+  }
+
+  .card-top-bar {
+    padding-bottom: 8px;
+  }
+
+  .card-top-badges {
+    gap: 4px;
+  }
+
+  .btn-card-action {
+    padding: 6px 12px;
+    min-height: 32px;
+    font-size: 0.78rem;
+  }
+
+  .card-respondent-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 5px;
+  }
+
+  .card-respondent-title {
+    font-size: 0.94rem;
+  }
+
+  .card-datetime-badge {
+    font-size: 0.74rem;
+    padding: 3px 7px;
+  }
+
+  .card-location-row {
+    font-size: 0.78rem;
+    line-height: 1.35;
+  }
+
   .card-main-layout {
     flex-direction: column;
-    gap: 14px;
+    gap: 12px;
+  }
+
+  .card-desc {
+    font-size: 0.85rem;
+    line-height: 1.5;
+  }
+
+  .card-output {
+    font-size: 0.78rem;
+    padding: 7px 10px;
   }
 
   .card-photo-col {
@@ -1117,8 +1356,103 @@ body {
 
   .card-photo-col .card-thumb {
     width: 100%;
-    max-width: 280px;
+    max-width: 100%;
     height: 160px;
+  }
+
+  /* ==========================================================================
+     HALAMAN MEDIA WAWANCARA MOBILE (HEMAT RUANG VERTIKAL & KONTEN LANGSUNG TERLIHAT)
+     ========================================================================== */
+  .media-page-header {
+    margin-bottom: 12px;
+    gap: 10px;
+  }
+
+  .media-page-title {
+    font-size: 1.18rem;
+    margin-bottom: 2px;
+  }
+
+  .media-page-subtitle {
+    font-size: 0.8rem;
+    line-height: 1.4;
+    color: var(--color-slate-500, #64748b);
+  }
+
+  .media-header-actions {
+    width: 100%;
+  }
+
+  .media-header-actions #btnMediaOpenAddLogbook {
+    width: 100%;
+    min-height: 44px;
+    justify-content: center;
+    font-size: 0.86rem;
+  }
+
+  /* RINGKASAN STATISTIK MEDIA: GRID 2x2 MIKRO HEMAT TEMPAT (TIDAK LAGI 1 KOLOM TUMPUK 4) */
+  .media-stats-row {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .media-stat-card {
+    padding: 8px 12px;
+    gap: 2px;
+    border-radius: var(--radius-sm, 6px);
+  }
+
+  .stat-count-num {
+    font-size: 1.25rem;
+    line-height: 1;
+  }
+
+  .stat-count-label {
+    font-size: 0.72rem;
+    line-height: 1.25;
+  }
+
+  /* BAR FILTER & PENCARIAN MEDIA MOBILE */
+  .media-filter-bar {
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .media-search-box {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    flex: 0 0 auto !important;
+  }
+
+  .media-search-box input {
+    font-size: 16px !important;
+    min-height: 42px;
+  }
+
+  .media-filter-select-wrapper,
+  .media-dropdown-container {
+    width: 100%;
+    flex: 0 0 auto !important;
+    min-width: 0;
+  }
+
+  .custom-dropdown-trigger {
+    width: 100%;
+    font-size: 15px;
+    min-height: 44px;
+    padding: 8px 12px;
+  }
+
+  .media-cards-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .media-card {
+    padding: 14px;
+    gap: 12px;
   }
 }
 
@@ -4907,6 +5241,14 @@ textarea.form-control {
   color: var(--color-primary, #064e3b);
 }
 
+.nav-tab-label-full {
+  display: inline;
+}
+
+.nav-tab-label-short {
+  display: none;
+}
+
 /* ==========================================================================
    KOMPONEN FORM INPUT MEDIA WAWANCARA PADA MODAL LOGBOOK
    ========================================================================== */
@@ -5178,9 +5520,16 @@ textarea.form-control {
 /* Kartu Statistik Media */
 .media-stats-row {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(4, 1fr);
   gap: 14px;
   margin-bottom: 24px;
+}
+
+@media (max-width: 900px) {
+  .media-stats-row {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
 }
 
 .media-stat-card {
@@ -5223,33 +5572,168 @@ textarea.form-control {
   max-width: 460px;
 }
 
-.media-filter-pills {
+/* ==========================================================================
+   KOMPONEN CUSTOM INDUSTRIAL DROPDOWN POPOVER (ANTI-SLOP & AKSESIBEL)
+   ========================================================================== */
+.custom-dropdown-container {
+  position: relative;
+  display: inline-block;
+}
+
+.media-filter-select-wrapper,
+.media-dropdown-container {
+  flex: 0 0 220px;
+  min-width: 190px;
+}
+
+.custom-dropdown-trigger {
+  width: 100%;
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 8px;
-  flex-wrap: wrap;
-}
-
-.media-pill {
-  padding: 6px 14px;
-  border-radius: 9999px;
-  border: 1px solid var(--color-slate-300, #cbd5e1);
+  padding: 8px 12px;
+  min-height: 40px;
   background: #ffffff;
-  color: var(--color-slate-700, #334155);
-  font-size: 0.8rem;
+  border: 1px solid var(--color-slate-200, #cbd5e1);
+  border-radius: var(--radius-md, 8px);
+  color: var(--color-slate-800, #1e293b);
+  font-family: var(--font-main);
+  font-size: 0.84rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.15s ease;
+  text-align: left;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
 }
 
-.media-pill:hover {
-  background: var(--color-slate-100, #f1f5f9);
+.custom-dropdown-trigger:hover {
+  border-color: var(--color-slate-400, #94a3b8);
+  background: #f8fafc;
 }
 
-.media-pill.active {
-  background: var(--color-primary, #064e3b);
-  color: #ffffff;
+.custom-dropdown-trigger:focus,
+.custom-dropdown-trigger.open {
+  outline: none;
   border-color: var(--color-primary, #064e3b);
+  box-shadow: 0 0 0 3px rgba(6, 78, 59, 0.12);
+}
+
+.dropdown-trigger-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-primary, #064e3b);
+  flex-shrink: 0;
+}
+
+.dropdown-trigger-label {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dropdown-trigger-chevron {
+  color: var(--color-slate-400, #94a3b8);
+  flex-shrink: 0;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.custom-dropdown-trigger.open .dropdown-trigger-chevron {
+  transform: rotate(180deg);
+  color: var(--color-primary, #064e3b);
+}
+
+/* Floating Popover Menu */
+.custom-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  min-width: 100%;
+  width: max-content;
+  max-width: 320px;
+  z-index: 1050;
+  background: #ffffff;
+  border: 1px solid var(--color-slate-200, #e2e8f0);
+  border-radius: var(--radius-md, 8px);
+  box-shadow: 0 10px 15px -3px rgba(15, 23, 42, 0.08), 0 4px 6px -4px rgba(15, 23, 42, 0.04);
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.custom-dropdown-menu.hidden {
+  display: none !important;
+}
+
+.dropdown-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  font-family: var(--font-main);
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--color-slate-700, #334155);
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.dropdown-menu-item:hover {
+  background: var(--color-slate-100, #f1f5f9);
+  color: var(--color-slate-900, #0f172a);
+}
+
+.dropdown-menu-item.active {
+  background: #ecfdf5;
+  color: #065f46;
+  font-weight: 600;
+}
+
+.dropdown-menu-item .item-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-slate-500, #64748b);
+  flex-shrink: 0;
+}
+
+.dropdown-menu-item.active .item-icon {
+  color: #065f46;
+}
+
+.dropdown-menu-item .item-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.dropdown-menu-item .item-check {
+  color: #065f46;
+  flex-shrink: 0;
+  margin-left: 8px;
+}
+
+.dropdown-menu-item .item-check.hidden {
+  display: none !important;
+}
+
+.visually-hidden {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
 }
 
 /* Grid Kartu Media Berbasis Sesi Logbook */
@@ -5649,23 +6133,69 @@ textarea.form-control {
 }
 
 @media (max-width: 768px) {
-  .media-cards-grid {
-    grid-template-columns: 1fr;
+  .media-view-wrapper {
+    padding: 6px 0 24px;
+  }
+
+  .media-page-header {
+    margin-bottom: 8px;
+    gap: 6px;
+  }
+
+  .media-stats-row {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    margin-bottom: 10px;
   }
 
   .media-filter-bar {
     flex-direction: column;
     align-items: stretch;
+    gap: 8px;
+    margin-bottom: 10px;
   }
 
   .media-search-box {
+    max-width: 100% !important;
+    width: 100% !important;
+    flex: 0 0 auto !important;
+    min-width: 0 !important;
+  }
+
+  .media-filter-select-wrapper,
+  .media-dropdown-container {
+    width: 100% !important;
+    flex: 0 0 auto !important;
+    min-width: 0 !important;
+  }
+
+  .custom-dropdown-trigger {
+    min-height: 44px;
+    font-size: 15px;
+  }
+
+  .custom-dropdown-menu {
+    left: 0;
+    right: 0;
+    width: 100%;
     max-width: 100%;
   }
 
-  .media-filter-pills {
-    width: 100%;
-    overflow-x: auto;
-    padding-bottom: 4px;
+  .dropdown-menu-item {
+    min-height: 42px;
+    padding: 10px 12px;
+    font-size: 14px;
+  }
+
+  .media-cards-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+    margin-top: 0;
+  }
+
+  .media-card {
+    padding: 14px;
+    gap: 12px;
   }
 }
 
