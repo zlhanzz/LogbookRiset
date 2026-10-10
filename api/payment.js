@@ -20,7 +20,7 @@ module.exports = async (req, res) => {
   const slug = process.env.PAKASIR_SLUG || 'logbook-otomatis';
   const apiKey = process.env.PAKASIR_API_KEY || '';
   const webhookSecret = process.env.PAKASIR_WEBHOOK_SECRET || '';
-  const defaultAmount = parseInt(process.env.PAKASIR_AMOUNT || '50000', 10);
+  const defaultAmount = parseInt(process.env.PAKASIR_AMOUNT || '55500', 10);
 
   const action = req.query.action || (req.body && req.body.action) || 'create';
 

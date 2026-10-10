@@ -17,11 +17,24 @@
     editingEntryId: null,
     isSyncing: false,
     currentPaymentOrder: null,
-    lastCompletedOrder: null
+    lastCompletedOrder: null,
+    isSandboxMode: null,
+    selectedAudioFile: null,
+    selectedVideoFile: null,
+    mediaSearchQuery: "",
+    mediaFilterType: "all",
+    activeWorkspaceTab: "logbook"
   };
 
   // DOM ELEMENTS
   const DOM = {
+    // Tab Navigasi Ruang Kerja Utama
+    tabNavLogbook: document.getElementById("tabNavLogbook"),
+    tabNavMedia: document.getElementById("tabNavMedia"),
+    navLogbookCount: document.getElementById("navLogbookCount"),
+    navMediaCount: document.getElementById("navMediaCount"),
+    dashboardFeedArea: document.getElementById("dashboardFeedArea"),
+
     // Layar Rute & Navigasi
     viewLoginScreen: document.getElementById("viewLoginScreen"),
     viewVerifyEmail: document.getElementById("viewVerifyEmail"),
@@ -42,6 +55,19 @@
     headerUserAvatarInitials: document.getElementById("headerUserAvatarInitials"),
     headerUserNameText: document.getElementById("headerUserNameText"),
     btnSignOutTop: document.getElementById("btnSignOutTop"),
+
+    // Halaman Khusus Koleksi Rekaman & Video Wawancara (Route: /media)
+    viewMediaGallery: document.getElementById("viewMediaGallery"),
+    btnMediaOpenAddLogbook: document.getElementById("btnMediaOpenAddLogbook"),
+    btnMediaBackToDashboard: document.getElementById("btnMediaBackToDashboard"),
+    statMediaTotalCount: document.getElementById("statMediaTotalCount"),
+    statMediaAudioCount: document.getElementById("statMediaAudioCount"),
+    statMediaVideoCount: document.getElementById("statMediaVideoCount"),
+    statMediaSessionsCount: document.getElementById("statMediaSessionsCount"),
+    inputSearchMedia: document.getElementById("inputSearchMedia"),
+    mediaCardsGrid: document.getElementById("mediaCardsGrid"),
+    mediaEmptyState: document.getElementById("mediaEmptyState"),
+    btnEmptyGoAddLogbook: document.getElementById("btnEmptyGoAddLogbook"),
 
     // Elemen Halaman Sukses Pembayaran & Tanda Terima Digital
     receiptOrderIdText: document.getElementById("receiptOrderIdText"),
@@ -150,6 +176,7 @@
     qrisSandboxNotice: document.getElementById("qrisSandboxNotice"),
     qrisBaseAmount: document.getElementById("qrisBaseAmount"),
     qrisFeeRow: document.getElementById("qrisFeeRow"),
+    qrisFeeLabel: document.getElementById("qrisFeeLabel"),
     qrisFeeAmount: document.getElementById("qrisFeeAmount"),
     qrisTotalAmount: document.getElementById("qrisTotalAmount"),
     qrisInstructionsText: document.getElementById("qrisInstructionsText"),
@@ -163,12 +190,13 @@
     btnCopyVaNumber: document.getElementById("btnCopyVaNumber"),
     vaExpiryHint: document.getElementById("vaExpiryHint"),
     vaBaseAmount: document.getElementById("vaBaseAmount"),
+    vaFeeRow: document.getElementById("vaFeeRow"),
+    vaFeeLabel: document.getElementById("vaFeeLabel"),
     vaFeeAmount: document.getElementById("vaFeeAmount"),
     vaTotalAmount: document.getElementById("vaTotalAmount"),
     btnCopyVaAmount: document.getElementById("btnCopyVaAmount"),
     vaInstructionsList: document.getElementById("vaInstructionsList"),
     btnCheckPaymentStatus: document.getElementById("btnCheckPaymentStatus"),
-    btnOpenPakasirWebLink: document.getElementById("btnOpenPakasirWebLink"),
     btnSimulateSuccessPayment: document.getElementById("btnSimulateSuccessPayment"),
     qrisSimulateArea: document.getElementById("qrisSimulateArea"),
 
@@ -225,6 +253,42 @@
     photoPreviewContainer: document.getElementById("photoPreviewContainer"),
     photoPreviewImg: document.getElementById("photoPreviewImg"),
     btnRemovePhoto: document.getElementById("btnRemovePhoto"),
+
+    // Rekaman Suara & Video Wawancara (Cloud Storage Terenkripsi)
+    inputAudioMedia: document.getElementById("inputAudioMedia"),
+    btnChooseAudioMedia: document.getElementById("btnChooseAudioMedia"),
+    audioFileSelectedInfo: document.getElementById("audioFileSelectedInfo"),
+    audioSelectedFileName: document.getElementById("audioSelectedFileName"),
+    audioSelectedFileSize: document.getElementById("audioSelectedFileSize"),
+    btnClearAudioMedia: document.getElementById("btnClearAudioMedia"),
+    inputVideoMedia: document.getElementById("inputVideoMedia"),
+    btnChooseVideoMedia: document.getElementById("btnChooseVideoMedia"),
+    videoFileSelectedInfo: document.getElementById("videoFileSelectedInfo"),
+    videoSelectedFileName: document.getElementById("videoSelectedFileName"),
+    videoSelectedFileSize: document.getElementById("videoSelectedFileSize"),
+    btnClearVideoMedia: document.getElementById("btnClearVideoMedia"),
+    existingLogbookMediaArea: document.getElementById("existingLogbookMediaArea"),
+    existingLogbookMediaList: document.getElementById("existingLogbookMediaList"),
+    mediaUploadProgressArea: document.getElementById("mediaUploadProgressArea"),
+    mediaUploadProgressText: document.getElementById("mediaUploadProgressText"),
+    mediaProgressBarFill: document.getElementById("mediaProgressBarFill"),
+
+    // Floating Background Upload Manager Widget
+    bgUploadWidget: document.getElementById("bgUploadWidget"),
+    bgUploadCard: document.getElementById("bgUploadCard"),
+    bgUploadTargetTitle: document.getElementById("bgUploadTargetTitle"),
+    btnToggleMinimizeUploadWidget: document.getElementById("btnToggleMinimizeUploadWidget"),
+    btnCloseUploadWidget: document.getElementById("btnCloseUploadWidget"),
+    bgUploadBody: document.getElementById("bgUploadBody"),
+    bgUploadFileName: document.getElementById("bgUploadFileName"),
+    bgUploadStatusBadge: document.getElementById("bgUploadStatusBadge"),
+    bgUploadProgressBar: document.getElementById("bgUploadProgressBar"),
+    bgUploadBytes: document.getElementById("bgUploadBytes"),
+    bgUploadPercent: document.getElementById("bgUploadPercent"),
+    bgUploadErrorArea: document.getElementById("bgUploadErrorArea"),
+    bgUploadErrorMsg: document.getElementById("bgUploadErrorMsg"),
+    btnRetryUpload: document.getElementById("btnRetryUpload"),
+
     btnSubmitLogbook: document.getElementById("btnSubmitLogbook"),
     btnSubmitText: document.getElementById("btnSubmitText"),
     submitSpinner: document.getElementById("submitSpinner"),
@@ -329,6 +393,7 @@
     LOGIN: "/login",
     VERIFY_EMAIL: "/verify-email",
     DASHBOARD: "/dashboard",
+    MEDIA: "/media",
     PRICING: "/pricing",
     CHECKOUT: "/checkout",
     PAYMENT_SUCCESS: "/payment-success",
@@ -417,6 +482,9 @@
         if (DOM.viewCheckout) DOM.viewCheckout.classList.remove("hidden");
         window.scrollTo({ top: 0, behavior: "smooth" });
         updateCheckoutSummaryDisplay();
+        if (state.isSandboxMode !== null) {
+          applySandboxMode(state.isSandboxMode);
+        }
         break;
 
       case ROUTES.PAYMENT_SUCCESS:
@@ -427,12 +495,20 @@
 
       case ROUTES.PROFILE:
         if (DOM.viewMainApp) DOM.viewMainApp.classList.remove("hidden");
+        setWorkspaceTab("logbook");
         openProfileModal();
+        break;
+
+      case ROUTES.MEDIA:
+        if (DOM.viewMainApp) DOM.viewMainApp.classList.remove("hidden");
+        setWorkspaceTab("media");
+        renderMediaGallery();
         break;
 
       case ROUTES.DASHBOARD:
       default:
         if (DOM.viewMainApp) DOM.viewMainApp.classList.remove("hidden");
+        setWorkspaceTab("logbook");
         break;
     }
   }
@@ -461,7 +537,7 @@
     const validUntil = new Date(completedDate);
     validUntil.setDate(validUntil.getDate() + 90);
 
-    const totalAmount = (order && (order.totalPayment || order.amount)) || 50660;
+    const totalAmount = (order && (order.totalPayment || order.amount)) || 55500;
 
     const dateFormatter = new Intl.DateTimeFormat("id-ID", {
       day: "numeric",
@@ -487,32 +563,13 @@
 
   function updateCheckoutSummaryDisplay() {
     const order = state.currentPaymentOrder;
-    const baseAmount = order?.amount || 50000;
-    let fee = 660;
-    if (order?.fee !== undefined) {
-      fee = order.fee;
-    } else if (order?.method === "artha_graha_va" || order?.method === "sampoerna_va") {
-      fee = 2000;
-    } else if (order?.method && order.method.includes("_va")) {
-      fee = 3500;
-    } else if (order?.method === "qris") {
-      fee = 660;
-    }
-    const total = order?.totalPayment || (baseAmount + fee);
+    const baseAmount = 50000;
+    const ppnAmount = 5500;
+    const total = (order && order.totalPayment) ? order.totalPayment : (baseAmount + ppnAmount);
 
     if (DOM.checkoutSubtotalText) DOM.checkoutSubtotalText.textContent = formatRupiah(baseAmount);
-    if (DOM.checkoutFeeText) DOM.checkoutFeeText.textContent = formatRupiah(fee);
-    if (DOM.checkoutFeeLabel) {
-      if (order?.method === "qris") {
-        DOM.checkoutFeeLabel.textContent = "Biaya Layanan (QRIS)";
-      } else if (order?.method && (order.method === "artha_graha_va" || order.method === "sampoerna_va")) {
-        DOM.checkoutFeeLabel.textContent = "Biaya Administrasi (Hemat Rp 2.000)";
-      } else if (order?.method && order.method.includes("_va")) {
-        DOM.checkoutFeeLabel.textContent = "Biaya Administrasi (VA)";
-      } else {
-        DOM.checkoutFeeLabel.textContent = "Biaya Transaksi";
-      }
-    }
+    if (DOM.checkoutFeeLabel) DOM.checkoutFeeLabel.textContent = "PPN (11%)";
+    if (DOM.checkoutFeeText) DOM.checkoutFeeText.textContent = formatRupiah(ppnAmount);
     if (DOM.checkoutGrandTotalText) DOM.checkoutGrandTotalText.textContent = formatRupiah(total);
   }
 
@@ -528,6 +585,12 @@
       state.entries = [];
       state.currentPaymentOrder = null;
       state.lastCompletedOrder = null;
+      if (window.ProfileManager && typeof ProfileManager.resetProfile === "function") {
+        ProfileManager.resetProfile();
+      }
+      if (window.CategoryManager && typeof CategoryManager.resetCategories === "function") {
+        CategoryManager.resetCategories();
+      }
       renderHeaderUserProfile(null);
       navigateTo(ROUTES.LOGIN, true);
       return;
@@ -616,7 +679,11 @@
     }
 
     // Dapatkan nama pengguna aktif dari profil riset atau akun login Google/Email
-    const prof = profile || (window.ProfileManager ? ProfileManager.currentProfile : null) || {};
+    const activeProf = profile || (window.ProfileManager ? ProfileManager.currentProfile : null) || {};
+    // Guard: Jika profile memiliki email dan email tidak cocok dengan user yang sedang login, abaikan profile tersebut
+    const isProfileOwner = !activeProf.email || !user.email || (activeProf.email.trim().toLowerCase() === user.email.trim().toLowerCase());
+    const prof = isProfileOwner ? activeProf : {};
+
     const displayName = (prof.name && prof.name.trim()) ||
                         (user.displayName && user.displayName.trim()) ||
                         (user.email ? user.email.split("@")[0] : "") ||
@@ -871,6 +938,12 @@
 
     // 5. Render Feed Cards
     renderFeedList(filtered);
+
+    // 6. Update Counter Workspace Nav & Koleksi Media
+    updateWorkspaceNavCounts();
+    if (state.activeWorkspaceTab === "media") {
+      renderMediaGallery();
+    }
   }
 
   function renderKabupatenPills() {
@@ -922,6 +995,7 @@
     sorted.forEach(item => {
       const card = document.createElement("div");
       card.className = "logbook-card";
+      card.id = `logbookCard-${item.id}`;
 
       // Badge Wilayah
       const kabBadgeClass = item.kabupaten.toLowerCase().includes("wajo") ? "wajo" : item.kabupaten.toLowerCase().includes("luwu") ? "luwu" : "";
@@ -930,6 +1004,10 @@
       // Foto Bukti
       const hasPhoto = Boolean(item.fotoUrl || item.fotoBase64);
       const photoSrc = item.fotoUrl || item.fotoBase64 || "";
+
+      // Indikator Berkas Media Wawancara Terlampir
+      const hasMedia = item.wawancara_media && Array.isArray(item.wawancara_media) && item.wawancara_media.length > 0;
+      const mediaBadgeHtml = hasMedia ? `<span class="badge-media-attached" title="${item.wawancara_media.length} Berkas Media Tersimpan di Cloud">${item.wawancara_media.length} Media</span>` : "";
 
       // Detail Lokasi (Kecamatan, Desa, Dusun opsional)
       const locDetailParts = [
@@ -944,6 +1022,7 @@
           <div class="card-location">
             <span class="location-badge ${kabBadgeClass}">${escapeHtml(displayKab)}</span>
             <span class="location-detail">${locDetailStr}</span>
+            ${mediaBadgeHtml}
             ${item.isDummy ? `<span class="badge-dummy-data">Data Contoh</span>` : ""}
           </div>
           <div class="card-actions-menu">
@@ -994,6 +1073,630 @@
   }
 
   // ==========================================================================
+  // 3.5. MODUL MULTIMEDIA WAWANCARA & GALERI MEDIA (CLOUD STORAGE TERENKRIPSI)
+  // ==========================================================================
+
+  function formatBytes(bytes) {
+    if (!bytes || isNaN(bytes) || bytes <= 0) return "0 B";
+    const k = 1024;
+    const sizes = ["B", "KB", "MB", "GB", "TB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + " " + sizes[i];
+  }
+
+  function setWorkspaceTab(tab) {
+    state.activeWorkspaceTab = tab;
+    if (tab === "media") {
+      if (DOM.tabNavLogbook) DOM.tabNavLogbook.classList.remove("active");
+      if (DOM.tabNavMedia) DOM.tabNavMedia.classList.add("active");
+      if (DOM.dashboardFeedArea) DOM.dashboardFeedArea.classList.add("hidden");
+      if (DOM.viewMediaGallery) DOM.viewMediaGallery.classList.remove("hidden");
+    } else {
+      if (DOM.tabNavLogbook) DOM.tabNavLogbook.classList.add("active");
+      if (DOM.tabNavMedia) DOM.tabNavMedia.classList.remove("active");
+      if (DOM.dashboardFeedArea) DOM.dashboardFeedArea.classList.remove("hidden");
+      if (DOM.viewMediaGallery) DOM.viewMediaGallery.classList.add("hidden");
+    }
+  }
+
+  function updateWorkspaceNavCounts() {
+    const totalEntries = state.entries.length;
+    let totalMedia = 0;
+    let totalAudio = 0;
+    let totalVideo = 0;
+    let sessionsWithMedia = 0;
+
+    state.entries.forEach(entry => {
+      if (entry.wawancara_media && Array.isArray(entry.wawancara_media) && entry.wawancara_media.length > 0) {
+        sessionsWithMedia++;
+        entry.wawancara_media.forEach(m => {
+          totalMedia++;
+          const isAudio = m.file_type === "audio" || (m.mime_type && m.mime_type.startsWith("audio/"));
+          const isVideo = m.file_type === "video" || (m.mime_type && m.mime_type.startsWith("video/"));
+          if (isAudio) totalAudio++;
+          else if (isVideo) totalVideo++;
+        });
+      }
+    });
+
+    if (DOM.navLogbookCount) DOM.navLogbookCount.textContent = totalEntries;
+    if (DOM.navMediaCount) DOM.navMediaCount.textContent = totalMedia;
+
+    if (DOM.statMediaTotalCount) DOM.statMediaTotalCount.textContent = totalMedia;
+    if (DOM.statMediaAudioCount) DOM.statMediaAudioCount.textContent = totalAudio;
+    if (DOM.statMediaVideoCount) DOM.statMediaVideoCount.textContent = totalVideo;
+    if (DOM.statMediaSessionsCount) DOM.statMediaSessionsCount.textContent = sessionsWithMedia;
+  }
+
+  function uploadMediaWithProgress(file, userId, logbookId, onProgress) {
+    return new Promise((resolve, reject) => {
+      if (!file || !userId || !logbookId) {
+        return reject(new Error("Berkas, userId, dan logbookId wajib tersedia untuk upload media."));
+      }
+      const xhr = new XMLHttpRequest();
+      const encName = encodeURIComponent(file.name);
+      const encType = encodeURIComponent(file.type || "application/octet-stream");
+      const uploadUrl = `/api/media/upload?userId=${encodeURIComponent(userId)}&logbookId=${encodeURIComponent(logbookId)}&fileName=${encName}&mimeType=${encType}`;
+
+      xhr.open("POST", uploadUrl, true);
+      xhr.setRequestHeader("Content-Type", file.type || "application/octet-stream");
+
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable && typeof onProgress === "function") {
+          const percent = Math.min(100, Math.round((e.loaded / e.total) * 100));
+          onProgress({ loaded: e.loaded, total: e.total, percent });
+        }
+      };
+
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try {
+            const res = JSON.parse(xhr.responseText);
+            if (res.success) {
+              resolve(res.data);
+            } else {
+              reject(new Error(res.message || "Gagal mengunggah media ke penyimpanan cloud"));
+            }
+          } catch (e) {
+            reject(new Error("Respon server unggah cloud tidak valid"));
+          }
+        } else {
+          try {
+            const res = JSON.parse(xhr.responseText);
+            reject(new Error(res.message || `Upload gagal dengan kode status HTTP ${xhr.status}`));
+          } catch (e) {
+            reject(new Error(`Upload gagal dengan kode status HTTP ${xhr.status}`));
+          }
+        }
+      };
+
+      xhr.onerror = () => reject(new Error("Koneksi jaringan terputus saat mengunggah berkas"));
+      xhr.ontimeout = () => reject(new Error("Batas waktu unggah berkas terlampaui (timeout)"));
+
+      xhr.send(file);
+    });
+  }
+
+  async function uploadMediaFile(file, userId, logbookId) {
+    return uploadMediaWithProgress(file, userId, logbookId);
+  }
+
+  // Pengelola Antrean Unggah Latar Belakang (Non-Blocking Floating Manager)
+  const BackgroundMediaManager = {
+    activeTask: null,
+    queue: [],
+
+    enqueue(task) {
+      this.queue.push(task);
+      if (!this.activeTask) {
+        this.processNext();
+      }
+    },
+
+    async processNext() {
+      if (this.queue.length === 0) {
+        this.activeTask = null;
+        return;
+      }
+      const task = this.queue.shift();
+      this.activeTask = task;
+      await this.executeTask(task);
+      this.processNext();
+    },
+
+    async executeTask(task) {
+      const { userId, logbookId, targetTitle, audioFile, videoFile } = task;
+
+      if (!DOM.bgUploadWidget) return;
+      DOM.bgUploadWidget.classList.remove("hidden");
+      if (DOM.bgUploadCard) DOM.bgUploadCard.classList.remove("minimized");
+      if (DOM.bgUploadTargetTitle) DOM.bgUploadTargetTitle.textContent = targetTitle || "Logbook Lapangan";
+      if (DOM.bgUploadErrorArea) DOM.bgUploadErrorArea.classList.add("hidden");
+      if (DOM.btnCloseUploadWidget) DOM.btnCloseUploadWidget.classList.add("hidden");
+
+      const uploadedResults = [];
+
+      try {
+        // 1. Unggah Audio jika ada
+        if (audioFile) {
+          this.updateWidgetState({
+            fileName: audioFile.name,
+            status: "Mengunggah Audio...",
+            percent: 0,
+            bytesText: `0 MB / ${formatBytes(audioFile.size)}`,
+            isCompleted: false,
+            isFailed: false
+          });
+
+          const audioRes = await uploadMediaWithProgress(audioFile, userId, logbookId, (p) => {
+            this.updateWidgetState({
+              fileName: audioFile.name,
+              status: `Mengunggah Audio (${p.percent}%)`,
+              percent: p.percent,
+              bytesText: `${formatBytes(p.loaded)} / ${formatBytes(p.total)}`,
+              isCompleted: false,
+              isFailed: false
+            });
+          });
+
+          uploadedResults.push({
+            file_id: audioRes.file_id,
+            file_name: audioRes.file_name,
+            drive_file_name: audioRes.drive_file_name,
+            file_type: "audio",
+            mime_type: audioRes.mime_type || audioFile.type || "audio/mpeg",
+            size: audioRes.size || audioFile.size,
+            web_view_link: audioRes.web_view_link || "",
+            stream_url: audioRes.stream_url || `/api/media/stream?file_id=${audioRes.file_id}`,
+            logbook_id: logbookId,
+            uploaded_at: new Date().toISOString()
+          });
+        }
+
+        // 2. Unggah Video jika ada
+        if (videoFile) {
+          this.updateWidgetState({
+            fileName: videoFile.name,
+            status: "Mengunggah Video...",
+            percent: 0,
+            bytesText: `0 MB / ${formatBytes(videoFile.size)}`,
+            isCompleted: false,
+            isFailed: false
+          });
+
+          const videoRes = await uploadMediaWithProgress(videoFile, userId, logbookId, (p) => {
+            this.updateWidgetState({
+              fileName: videoFile.name,
+              status: `Mengunggah Video (${p.percent}%)`,
+              percent: p.percent,
+              bytesText: `${formatBytes(p.loaded)} / ${formatBytes(p.total)}`,
+              isCompleted: false,
+              isFailed: false
+            });
+          });
+
+          uploadedResults.push({
+            file_id: videoRes.file_id,
+            file_name: videoRes.file_name,
+            drive_file_name: videoRes.drive_file_name,
+            file_type: "video",
+            mime_type: videoRes.mime_type || videoFile.type || "video/mp4",
+            size: videoRes.size || videoFile.size,
+            web_view_link: videoRes.web_view_link || "",
+            stream_url: videoRes.stream_url || `/api/media/stream?file_id=${videoRes.file_id}`,
+            logbook_id: logbookId,
+            uploaded_at: new Date().toISOString()
+          });
+        }
+
+        // 3. Patch atomik ke Firestore & state lokal
+        if (uploadedResults.length > 0) {
+          let updatedMedia = [];
+          const entryIdx = state.entries.findIndex(e => e.id === logbookId);
+          if (entryIdx !== -1) {
+            const entry = state.entries[entryIdx];
+            updatedMedia = Array.isArray(entry.wawancara_media) ? [...entry.wawancara_media] : [];
+            uploadedResults.forEach(r => {
+              if (!updatedMedia.some(m => m.file_id === r.file_id)) {
+                updatedMedia.push(r);
+              }
+            });
+            state.entries[entryIdx].wawancara_media = updatedMedia;
+          } else {
+            updatedMedia = [...uploadedResults];
+          }
+
+          if (window.FirebaseService && FirebaseService.db && userId) {
+            await FirebaseService.db
+              .collection("users")
+              .doc(userId)
+              .collection("logbooks")
+              .doc(logbookId)
+              .set({ wawancara_media: updatedMedia }, { merge: true });
+          }
+
+          const user = window.AuthManager ? AuthManager.currentUser : null;
+          saveEntriesToLocalStorage(state.entries, user);
+          updateDashboard();
+          updateWorkspaceNavCounts();
+          if (state.activeWorkspaceTab === "media") {
+            renderMediaGallery();
+          }
+
+          this.updateWidgetState({
+            fileName: uploadedResults.map(r => r.file_name).join(", "),
+            status: "Selesai (Cloud Terenkripsi)",
+            percent: 100,
+            bytesText: "100% Tersimpan",
+            isCompleted: true,
+            isFailed: false
+          });
+
+          showToast("Media wawancara berhasil dicadangkan ke cloud terenkripsi!", "success");
+          if (DOM.btnCloseUploadWidget) DOM.btnCloseUploadWidget.classList.remove("hidden");
+
+          setTimeout(() => {
+            if (this.activeTask === task && DOM.bgUploadWidget) {
+              DOM.bgUploadWidget.classList.add("hidden");
+            }
+          }, 8000);
+        }
+      } catch (err) {
+        console.error("Gagal mengunggah media background:", err);
+        this.updateWidgetState({
+          fileName: (videoFile || audioFile)?.name || "Berkas Media",
+          status: "Gagal Mengunggah",
+          percent: 0,
+          bytesText: "Terputus",
+          isCompleted: false,
+          isFailed: true,
+          errorMsg: err.message || "Gagal mengunggah ke penyimpanan cloud"
+        });
+        showToast("Gagal mengunggah media: " + err.message, "error");
+        if (DOM.btnCloseUploadWidget) DOM.btnCloseUploadWidget.classList.remove("hidden");
+      }
+    },
+
+    updateWidgetState({ fileName, status, percent, bytesText, isCompleted, isFailed, errorMsg }) {
+      if (DOM.bgUploadFileName) DOM.bgUploadFileName.textContent = fileName || "-";
+      if (DOM.bgUploadStatusBadge) {
+        DOM.bgUploadStatusBadge.textContent = status || "Memproses...";
+        DOM.bgUploadStatusBadge.className = "bg-upload-status-badge" + (isCompleted ? " completed" : isFailed ? " failed" : "");
+      }
+      if (DOM.bgUploadProgressBar) {
+        DOM.bgUploadProgressBar.style.width = `${percent}%`;
+        DOM.bgUploadProgressBar.className = "bg-upload-progress-fill" + (isCompleted ? " completed" : isFailed ? " failed" : "");
+      }
+      if (DOM.bgUploadPercent) DOM.bgUploadPercent.textContent = `${percent}%`;
+      if (DOM.bgUploadBytes) DOM.bgUploadBytes.textContent = bytesText || "";
+
+      if (DOM.bgUploadErrorArea) {
+        if (isFailed) {
+          DOM.bgUploadErrorArea.classList.remove("hidden");
+          if (DOM.bgUploadErrorMsg) DOM.bgUploadErrorMsg.textContent = errorMsg || "Unggahan gagal.";
+        } else {
+          DOM.bgUploadErrorArea.classList.add("hidden");
+        }
+      }
+    }
+  };
+
+  function renderMediaGallery() {
+    if (!DOM.mediaCardsGrid) return;
+
+    updateWorkspaceNavCounts();
+
+    const profileTz = (window.ProfileManager && ProfileManager.currentProfile && ProfileManager.currentProfile.timezone) || "WITA";
+
+    // Kumpulkan seluruh sesi logbook yang memiliki berkas media wawancara
+    const sessionsWithMedia = state.entries.filter(entry => {
+      return Array.isArray(entry.wawancara_media) && entry.wawancara_media.length > 0;
+    });
+
+    // Urutkan berdasarkan tanggal & waktu aktivitas terbaru
+    sessionsWithMedia.sort((a, b) => {
+      const dtA = (a.tanggal || "1970-01-01") + "T" + (a.waktuMulai || "00:00");
+      const dtB = (b.tanggal || "1970-01-01") + "T" + (b.waktuMulai || "00:00");
+      return dtB.localeCompare(dtA);
+    });
+
+    // Filter berdasarkan tab jenis media (all / audio / video)
+    const typeFilter = state.mediaFilterType || "all";
+    let filteredSessions = sessionsWithMedia.filter(session => {
+      const audios = session.wawancara_media.filter(m => m.file_type === "audio" || (m.mime_type && m.mime_type.startsWith("audio/")));
+      const videos = session.wawancara_media.filter(m => m.file_type === "video" || (m.mime_type && m.mime_type.startsWith("video/")));
+      if (typeFilter === "audio") return audios.length > 0;
+      if (typeFilter === "video") return videos.length > 0;
+      return true;
+    });
+
+    // Filter berdasarkan kata kunci pencarian
+    const q = (state.mediaSearchQuery || "").trim().toLowerCase();
+    if (q) {
+      filteredSessions = filteredSessions.filter(entry => {
+        const fileNames = (entry.wawancara_media || []).map(m => m.file_name || "").join(" ");
+        const searchPool = [
+          entry.sasaranResponden,
+          entry.jenisKegiatan,
+          entry.deskripsi,
+          entry.output,
+          entry.tanggal,
+          entry.kabupaten,
+          entry.kecamatan,
+          entry.desa,
+          entry.dusun,
+          fileNames
+        ].filter(Boolean).join(" ").toLowerCase();
+        return searchPool.includes(q);
+      });
+    }
+
+    // Tampilkan Empty State jika kosong
+    if (filteredSessions.length === 0) {
+      DOM.mediaCardsGrid.innerHTML = "";
+      if (DOM.mediaEmptyState) DOM.mediaEmptyState.classList.remove("hidden");
+      return;
+    }
+
+    if (DOM.mediaEmptyState) DOM.mediaEmptyState.classList.add("hidden");
+    DOM.mediaCardsGrid.innerHTML = "";
+
+    filteredSessions.forEach(entry => {
+      // Pilah media audio dan video
+      const audios = (entry.wawancara_media || []).filter(m => m.file_type === "audio" || (m.mime_type && m.mime_type.startsWith("audio/")));
+      const videos = (entry.wawancara_media || []).filter(m => m.file_type === "video" || (m.mime_type && m.mime_type.startsWith("video/")));
+
+      // Tentukan media yang akan ditampilkan pada kartu sesuai filter tab
+      let mediaToShow = [];
+      if (typeFilter === "audio") {
+        mediaToShow = audios;
+      } else if (typeFilter === "video") {
+        mediaToShow = videos;
+      } else {
+        // "all": tampilkan video terlebih dahulu baru kemudian audio
+        mediaToShow = [...videos, ...audios];
+      }
+
+      // Format Waktu Sesi Wawancara
+      let timeText = "";
+      if (entry.waktuMulai && entry.waktuSelesai) {
+        timeText = `${entry.waktuMulai} - ${entry.waktuSelesai} ${profileTz}`;
+      } else if (entry.waktuMulai) {
+        timeText = `${entry.waktuMulai} ${profileTz}`;
+      } else {
+        timeText = `-`;
+      }
+
+      // Lokasi Administratif Lengkap
+      const locParts = [
+        entry.kabupaten ? (entry.kabupaten.toLowerCase().startsWith("kab") ? entry.kabupaten : `Kab. ${entry.kabupaten}`) : "",
+        entry.kecamatan ? `Kec. ${entry.kecamatan}` : "",
+        entry.desa ? `Desa ${entry.desa}` : "",
+        entry.dusun ? `Dsn. ${entry.dusun}` : ""
+      ].filter(Boolean);
+      const locText = locParts.length > 0 ? locParts.join(" &bull; ") : "Wilayah Riset Lapangan";
+
+      // Foto Bukti Terlampir?
+      const hasPhoto = Boolean(entry.fotoUrl || entry.fotoBase64);
+
+      // Buat elemen Card
+      const card = document.createElement("div");
+      card.className = "media-card";
+      card.id = `mediaSessionCard-${entry.id}`;
+
+      // Render daftar player media yang sesuai filter
+      const playersHtml = mediaToShow.map(m => {
+        const isVideo = m.file_type === "video" || (m.mime_type && m.mime_type.startsWith("video/"));
+        const streamUrl = m.stream_url || `/api/media/stream?file_id=${encodeURIComponent(m.file_id)}`;
+        const driveLink = m.web_view_link || `https://drive.google.com/file/d/${m.file_id}/view`;
+        const formattedSize = formatBytes(m.size);
+
+        return `
+          <div class="media-player-item-block">
+            <div class="media-item-header">
+              <span class="media-card-type-tag ${isVideo ? "video" : "audio"}">
+                ${isVideo ? "Video Wawancara" : "Rekaman Suara"}
+              </span>
+              <a href="${streamUrl}&download=1&filename=${encodeURIComponent(m.file_name || "berkas")}" download="${escapeHtml(m.file_name || "berkas")}" class="btn-download-media-link" title="Unduh berkas ini ke perangkat">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="7 10 12 15 17 10"></polyline>
+                  <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+                <span>Unduh Berkas</span>
+              </a>
+            </div>
+
+            <div class="media-player-wrapper">
+              ${isVideo ? `
+                <video controls preload="metadata" playsinline>
+                  <source src="${streamUrl}" type="${escapeHtml(m.mime_type || "video/mp4")}">
+                  Browser Anda tidak mendukung pemutar video HTML5.
+                </video>
+              ` : `
+                <audio controls preload="none">
+                  <source src="${streamUrl}" type="${escapeHtml(m.mime_type || "audio/mpeg")}">
+                  Browser Anda tidak mendukung pemutar audio HTML5.
+                </audio>
+              `}
+            </div>
+
+            <div class="media-file-info-row">
+              <span class="media-file-info-name" title="${escapeHtml(m.file_name || "berkas")}">${escapeHtml(m.file_name || "berkas")}</span>
+              <span class="media-file-info-size">${formattedSize}</span>
+            </div>
+          </div>
+        `;
+      }).join("");
+
+      card.innerHTML = `
+        <div class="media-card-top">
+          <div class="media-card-badges">
+            <span class="media-card-cat-badge">${escapeHtml(entry.jenisKegiatan || "Aktivitas Penelitian")}</span>
+            ${hasPhoto ? `<span class="media-card-photo-badge" title="Terdapat foto bukti dokumentasi GPS Map Camera">Foto Lapangan Terlampir</span>` : ""}
+          </div>
+          <div class="media-card-datetime">
+            <span>${formatDateIndo(entry.tanggal)}</span>
+            <span>&bull;</span>
+            <span>${escapeHtml(timeText)}</span>
+          </div>
+        </div>
+
+        <div class="media-card-respondent-block">
+          <div class="media-card-respondent-header">
+            <span class="media-card-respondent-name">
+              ${entry.sasaranResponden ? escapeHtml(entry.sasaranResponden) : "Responden / Informan Lapangan"}
+            </span>
+            <span class="media-card-respondent-tag">Responden Lapangan</span>
+          </div>
+          <div class="media-card-location-row">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+              <circle cx="12" cy="10" r="3"></circle>
+            </svg>
+            <span>${locText}</span>
+          </div>
+        </div>
+
+        <div class="media-card-substance-block">
+          ${entry.deskripsi ? `<p class="media-card-desc">${escapeHtml(entry.deskripsi)}</p>` : ""}
+          <div class="media-card-output-box">
+            <span class="media-card-output-label">Output / Capaian Kegiatan</span>
+            <span class="media-card-output-val">${escapeHtml(entry.output || "-")}</span>
+          </div>
+        </div>
+
+        <div class="media-card-media-section">
+          <div class="media-card-media-header">
+            <span class="media-card-media-title">Dokumentasi Media Wawancara</span>
+            <span class="media-card-media-count">${mediaToShow.length} Berkas Tersimpan di Cloud</span>
+          </div>
+          <div class="media-players-container">
+            ${playersHtml}
+          </div>
+        </div>
+
+        <div class="media-card-footer">
+          <button type="button" class="btn-track-logbook" data-action="track-logbook" data-logbook-id="${escapeHtml(entry.id)}">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
+            </svg>
+            <span>Buka Catatan Logbook di Tabel</span>
+          </button>
+          <span class="media-cloud-status" title="Tersimpan secara aman di penyimpanan cloud terenkripsi">
+            <span class="cloud-dot"></span> Cloud Storage Terenkripsi
+          </span>
+        </div>
+      `;
+
+      DOM.mediaCardsGrid.appendChild(card);
+    });
+  }
+
+  function trackLogbookFromMedia(logbookId) {
+    if (!logbookId) return;
+
+    // Pindah ke tampilan dashboard
+    navigateTo(ROUTES.DASHBOARD);
+
+    // Cari entri logbook
+    const entry = state.entries.find(e => e.id === logbookId);
+    if (!entry) {
+      showToast("Catatan logbook asal tidak ditemukan.", "info");
+      return;
+    }
+
+    // Sorot kartu dan buka modal edit
+    setTimeout(() => {
+      const cardEl = document.getElementById(`logbookCard-${logbookId}`);
+      if (cardEl) {
+        cardEl.scrollIntoView({ behavior: "smooth", block: "center" });
+        cardEl.classList.add("highlight-pulse");
+        setTimeout(() => cardEl.classList.remove("highlight-pulse"), 2500);
+      }
+      openEditModal(logbookId);
+      showToast(`Menampilkan catatan logbook: ${entry.sasaranResponden || entry.jenisKegiatan} (${formatDateIndo(entry.tanggal)})`, "info");
+    }, 150);
+  }
+
+  function renderExistingLogbookMedia(item) {
+    if (!DOM.existingLogbookMediaArea || !DOM.existingLogbookMediaList) return;
+    const mediaList = item.wawancara_media || [];
+
+    if (mediaList.length === 0) {
+      DOM.existingLogbookMediaArea.classList.add("hidden");
+      DOM.existingLogbookMediaList.innerHTML = "";
+      return;
+    }
+
+    DOM.existingLogbookMediaArea.classList.remove("hidden");
+    DOM.existingLogbookMediaList.innerHTML = "";
+
+    mediaList.forEach((m, idx) => {
+      const isVideo = m.file_type === "video" || (m.mime_type && m.mime_type.startsWith("video/"));
+      const streamUrl = m.stream_url || `/api/media/stream?file_id=${encodeURIComponent(m.file_id)}`;
+      const sizeStr = formatBytes(m.size);
+
+      const itemRow = document.createElement("div");
+      itemRow.className = "existing-media-item";
+      itemRow.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 8px; flex: 1; overflow: hidden;">
+          <span class="existing-media-type-badge ${isVideo ? "video" : "audio"}">
+            ${isVideo ? "VIDEO" : "AUDIO"}
+          </span>
+          <span style="font-size: 0.76rem; font-weight: 600; color: #1e293b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${escapeHtml(m.file_name)}">
+            ${escapeHtml(m.file_name)}
+          </span>
+          <span style="font-size: 0.7rem; color: #64748b;">(${sizeStr})</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 6px;">
+          <a href="${streamUrl}&download=1&filename=${encodeURIComponent(m.file_name)}" download="${escapeHtml(m.file_name)}" class="btn btn-sm btn-light" style="font-size: 0.72rem; padding: 2px 8px;" title="Unduh berkas ini">Unduh</a>
+          <button type="button" class="btn btn-sm btn-outline-danger btn-remove-existing-media" data-media-idx="${idx}" style="font-size: 0.72rem; padding: 2px 8px;" title="Hapus media ini dari logbook">Hapus</button>
+        </div>
+      `;
+      DOM.existingLogbookMediaList.appendChild(itemRow);
+    });
+  }
+
+  async function handleRemoveExistingMedia(mediaIdx) {
+    if (!state.editingEntryId) return;
+    const entry = state.entries.find(e => e.id === state.editingEntryId);
+    if (!entry || !Array.isArray(entry.wawancara_media)) return;
+
+    const removedMedia = entry.wawancara_media[mediaIdx];
+    if (!removedMedia) return;
+
+    if (!confirm(`Hapus berkas "${removedMedia.file_name}" dari catatan logbook ini?`)) return;
+
+    entry.wawancara_media.splice(mediaIdx, 1);
+    const user = window.AuthManager ? AuthManager.currentUser : null;
+
+    if (window.FirebaseService && FirebaseService.db && user) {
+      try {
+        await FirebaseService.db
+          .collection("users")
+          .doc(user.uid)
+          .collection("logbooks")
+          .doc(state.editingEntryId)
+          .update({
+            wawancara_media: entry.wawancara_media,
+            updatedAt: new Date().toISOString()
+          });
+      } catch (dbErr) {
+        console.warn("Gagal update firestore wawancara_media:", dbErr);
+      }
+    }
+
+    saveEntriesToLocalStorage(state.entries, user);
+    renderExistingLogbookMedia(entry);
+    updateWorkspaceNavCounts();
+    showToast("Berkas media berhasil dihapus dari catatan logbook.", "info");
+  }
+
+  // ==========================================================================
   // ==========================================================================
   // 4. PORTAL PEMBAYARAN MULTI-CHANNEL PAKASIR API V2
   // ==========================================================================
@@ -1014,57 +1717,57 @@
       "Buka aplikasi <strong>BRImo</strong> atau kunjungi ATM BRI terdekat.",
       "Pilih menu <strong>Pembayaran / Transfer</strong> &rarr; <strong>Virtual Account (BRIVA)</strong>.",
       "Masukkan nomor Virtual Account BRI yang tertera di atas.",
-      "Periksa nama penerima dan nominal transaksi (Rp 53.500).",
+      "Periksa nama penerima dan nominal transaksi (Rp 55.500).",
       "Konfirmasi dengan PIN BRImo/ATM dan simpan bukti transaksi."
     ],
     bni_va: [
       "Buka aplikasi <strong>BNI Mobile Banking</strong> atau kunjungi ATM BNI.",
       "Pilih menu <strong>Transfer</strong> &rarr; <strong>Virtual Account Billing</strong>.",
       "Masukkan nomor Virtual Account BNI yang tertera di atas.",
-      "Pastikan tagihan dan detail pembayaran telah sesuai (Rp 53.500).",
+      "Pastikan tagihan dan detail pembayaran telah sesuai (Rp 55.500).",
       "Masukkan Password Transaksi dan selesaikan pembayaran."
     ],
     atm_bersama_va: [
       "Gunakan Mobile Banking atau ATM dari bank mana pun berlogo <strong>ATM Bersama / PRIMA / ALTO</strong>.",
       "Pilih menu <strong>Transfer Antar Bank</strong> lalu masukkan kode bank dan nomor VA di atas.",
-      "Pastikan nominal transfer sesuai persis dengan total tagihan (Rp 53.500).",
+      "Pastikan nominal transfer sesuai persis dengan total tagihan (Rp 55.500).",
       "Konfirmasi transaksi dan simpan tanda terima pembayaran."
     ],
     bnc_va: [
       "Buka aplikasi <strong>Neobank (Bank Neo Commerce)</strong> atau m-banking lain.",
       "Pilih menu <strong>Transfer / Pembayaran VA</strong>.",
       "Masukkan nomor Virtual Account BNC yang tertera di atas.",
-      "Periksa nominal (Rp 53.500) dan konfirmasi pembayaran."
+      "Periksa nominal (Rp 55.500) dan konfirmasi pembayaran."
     ],
     cimb_niaga_va: [
       "Buka aplikasi <strong>OCTO Mobile</strong> atau ATM CIMB Niaga.",
       "Pilih menu <strong>Transfer</strong> &rarr; <strong>Rekening Ponsel / Virtual Account</strong>.",
       "Masukkan nomor Virtual Account CIMB Niaga di atas.",
-      "Pastikan jumlah tagihan (Rp 53.500) sesuai dan masukkan PIN OCTO Mobile."
+      "Pastikan jumlah tagihan (Rp 55.500) sesuai dan masukkan PIN OCTO Mobile."
     ],
     maybank_va: [
       "Buka aplikasi <strong>M2U ID App</strong> atau kunjungi ATM Maybank.",
       "Pilih menu <strong>Transfer</strong> &rarr; <strong>Virtual Account</strong>.",
       "Masukkan nomor Virtual Account Maybank yang tertera di atas.",
-      "Konfirmasi nominal tagihan (Rp 53.500) dan selesaikan transaksi."
+      "Konfirmasi nominal tagihan (Rp 55.500) dan selesaikan transaksi."
     ],
     permata_va: [
       "Buka aplikasi <strong>PermataMobile X</strong> atau ATM Bank Permata.",
       "Pilih menu <strong>Pembayaran</strong> &rarr; <strong>Virtual Account</strong>.",
       "Masukkan nomor Virtual Account Permata yang tertera di atas.",
-      "Periksa rincian tagihan (Rp 53.500) dan konfirmasi transfer."
+      "Periksa rincian tagihan (Rp 55.500) dan konfirmasi transfer."
     ],
     artha_graha_va: [
       "Buka aplikasi <strong>Agi Mobile</strong> atau ATM Bank Artha Graha.",
       "Pilih menu <strong>Pembayaran / Virtual Account</strong>.",
       "Masukkan nomor Virtual Account Artha Graha di atas.",
-      "Pastikan nominal tagihan lebih hemat (Rp 52.000) telah sesuai dan selesaikan transaksi."
+      "Pastikan nominal tagihan (Rp 55.500) telah sesuai dan selesaikan transaksi."
     ],
     sampoerna_va: [
       "Buka aplikasi <strong>Sampoerna Mobile Banking</strong> atau transfer antar bank.",
       "Pilih menu <strong>Virtual Account / Transfer</strong>.",
       "Masukkan nomor Virtual Account Bank Sahabat Sampoerna di atas.",
-      "Pastikan nominal tagihan hemat (Rp 52.000) telah sesuai dan selesaikan transaksi."
+      "Pastikan nominal tagihan (Rp 55.500) telah sesuai dan selesaikan transaksi."
     ]
   };
 
@@ -1080,6 +1783,30 @@
     if (DOM.checkoutChannelSelection) DOM.checkoutChannelSelection.classList.remove("hidden");
     if (DOM.checkoutActivePaymentView) DOM.checkoutActivePaymentView.classList.add("hidden");
   }
+
+  function applySandboxMode(isSandbox) {
+    const isSandboxMode = Boolean(isSandbox);
+    state.isSandboxMode = isSandboxMode;
+
+    // 1. Keterangan Sandbox di atas QRIS
+    if (DOM.qrisSandboxNotice) {
+      if (isSandboxMode) DOM.qrisSandboxNotice.classList.remove("hidden");
+      else DOM.qrisSandboxNotice.classList.add("hidden");
+    }
+
+    // 2. Keterangan Sandbox di atas Virtual Account
+    if (DOM.vaSandboxNotice) {
+      if (isSandboxMode) DOM.vaSandboxNotice.classList.remove("hidden");
+      else DOM.vaSandboxNotice.classList.add("hidden");
+    }
+
+    // 3. Tombol Simulasi Sandbox & Hint Testing
+    if (DOM.qrisSimulateArea) {
+      if (isSandboxMode) DOM.qrisSimulateArea.classList.remove("hidden");
+      else DOM.qrisSimulateArea.classList.add("hidden");
+    }
+  }
+  window.applySandboxMode = applySandboxMode;
 
   function formatRupiah(num) {
     const val = Number(num) || 0;
@@ -1132,7 +1859,7 @@
             userId: user.uid,
             email: user.email,
             name: user.displayName || user.email.split("@")[0],
-            amount: 50000,
+            amount: 55500,
             method: "payment_link"
           })
         });
@@ -1147,8 +1874,8 @@
           orderId,
           txnId,
           amount: 50000,
-          fee: data.fee || 0,
-          totalPayment: data.total_payment || 50000,
+          fee: 5500,
+          totalPayment: 55500,
           paymentUrl,
           method: "payment_link"
         };
@@ -1170,8 +1897,8 @@
                 packageTitle: "Akses Sistem Logbook Riset (90 Hari)",
                 durationDays: 90,
                 amount: 50000,
-                fee: data.fee || 0,
-                totalPayment: data.total_payment || 50000,
+                fee: 5500,
+                totalPayment: 55500,
                 paymentMethod: "payment_link",
                 paymentGateway: "pakasir",
                 status: "pending",
@@ -1197,8 +1924,9 @@
         if (DOM.vaOrderIdText) DOM.vaOrderIdText.textContent = `Order #${orderId}`;
         if (DOM.vaNumberDisplay) DOM.vaNumberDisplay.textContent = "Buka di Browser";
         if (DOM.vaBaseAmount) DOM.vaBaseAmount.textContent = formatRupiah(50000);
-        if (DOM.vaFeeAmount) DOM.vaFeeAmount.textContent = "Sesuai Channel";
-        if (DOM.vaTotalAmount) DOM.vaTotalAmount.textContent = "Multi-Channel";
+        if (DOM.vaFeeLabel) DOM.vaFeeLabel.textContent = "PPN (11%)";
+        if (DOM.vaFeeAmount) DOM.vaFeeAmount.textContent = formatRupiah(5500);
+        if (DOM.vaTotalAmount) DOM.vaTotalAmount.textContent = formatRupiah(55500);
 
         updateCheckoutSummaryDisplay();
       } catch (e) {
@@ -1242,7 +1970,7 @@
           userId: user.uid,
           email: user.email,
           name: user.displayName || user.email.split("@")[0],
-          amount: 50000,
+          amount: 55500,
           method: method
         })
       });
@@ -1254,9 +1982,9 @@
 
       const orderId = data.order_id || (data.data && data.data.order_id) || data.orderId || `LB-${Date.now()}`;
       const txnId = data.txn_id || (data.data && data.data.txn_id) || "";
-      const amount = data.amount || (data.data && data.data.amount) || 50000;
-      const fee = data.fee || (data.data && data.data.fee) || 0;
-      const totalPayment = data.total_payment || (data.data && data.data.total_payment) || (amount + fee);
+      const baseAmount = 50000;
+      const ppnAmount = 5500;
+      const totalPayment = 55500;
       const isSandbox = Boolean(data.is_sandbox !== undefined ? data.is_sandbox : (data.data && data.data.is_sandbox));
       const qrString = data.qr_string || (data.data && (data.data.qr_string || data.data.qris_string)) || "";
       const vaNumber = data.va_number || (data.data && data.data.va_number) || "";
@@ -1268,8 +1996,8 @@
         orderId,
         txnId,
         method,
-        amount,
-        fee,
+        amount: baseAmount,
+        fee: ppnAmount,
         totalPayment,
         isSandbox,
         qrString,
@@ -1293,8 +2021,8 @@
               userName: user.displayName || user.email.split("@")[0],
               packageTitle: "Akses Sistem Logbook Riset (90 Hari)",
               durationDays: 90,
-              amount,
-              fee,
+              amount: baseAmount,
+              fee: ppnAmount,
               totalPayment,
               paymentMethod: method,
               paymentGateway: "pakasir",
@@ -1313,18 +2041,13 @@
 
       if (method === "qris") {
         if (DOM.qrisOrderIdText) DOM.qrisOrderIdText.textContent = `Order #${orderId}`;
-        if (DOM.qrisBaseAmount) DOM.qrisBaseAmount.textContent = formatRupiah(amount);
-        if (DOM.qrisFeeAmount) DOM.qrisFeeAmount.textContent = formatRupiah(fee);
-        if (DOM.qrisFeeRow) {
-          if (fee > 0) DOM.qrisFeeRow.classList.remove("hidden");
-          else DOM.qrisFeeRow.classList.add("hidden");
-        }
+        if (DOM.qrisBaseAmount) DOM.qrisBaseAmount.textContent = formatRupiah(baseAmount);
+        if (DOM.qrisFeeLabel) DOM.qrisFeeLabel.textContent = "PPN (11%)";
+        if (DOM.qrisFeeAmount) DOM.qrisFeeAmount.textContent = formatRupiah(ppnAmount);
+        if (DOM.qrisFeeRow) DOM.qrisFeeRow.classList.remove("hidden");
         if (DOM.qrisTotalAmount) DOM.qrisTotalAmount.textContent = formatRupiah(totalPayment);
 
-        if (DOM.qrisSandboxNotice) {
-          if (isSandbox) DOM.qrisSandboxNotice.classList.remove("hidden");
-          else DOM.qrisSandboxNotice.classList.add("hidden");
-        }
+        applySandboxMode(isSandbox);
 
         const qrisImgUrl = qrString
           ? `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(qrString)}`
@@ -1342,8 +2065,10 @@
         if (DOM.vaBankNameTitle) DOM.vaBankNameTitle.textContent = VA_BANK_NAMES[method] || "Bank Virtual Account";
         if (DOM.vaOrderIdText) DOM.vaOrderIdText.textContent = `Order #${orderId}`;
         if (DOM.vaNumberDisplay) DOM.vaNumberDisplay.textContent = vaNumber || "Menunggu Nomor...";
-        if (DOM.vaBaseAmount) DOM.vaBaseAmount.textContent = formatRupiah(amount);
-        if (DOM.vaFeeAmount) DOM.vaFeeAmount.textContent = formatRupiah(fee);
+        if (DOM.vaBaseAmount) DOM.vaBaseAmount.textContent = formatRupiah(baseAmount);
+        if (DOM.vaFeeLabel) DOM.vaFeeLabel.textContent = "PPN (11%)";
+        if (DOM.vaFeeAmount) DOM.vaFeeAmount.textContent = formatRupiah(ppnAmount);
+        if (DOM.vaFeeRow) DOM.vaFeeRow.classList.remove("hidden");
         if (DOM.vaTotalAmount) DOM.vaTotalAmount.textContent = formatRupiah(totalPayment);
 
         if (DOM.vaInstructionsList) {
@@ -1356,10 +2081,7 @@
           DOM.vaInstructionsList.innerHTML = list.map(item => `<li>${item}</li>`).join("");
         }
 
-        if (DOM.vaSandboxNotice) {
-          if (isSandbox) DOM.vaSandboxNotice.classList.remove("hidden");
-          else DOM.vaSandboxNotice.classList.add("hidden");
-        }
+        applySandboxMode(isSandbox);
       }
     } catch (err) {
       console.error("Gagal membuat transaksi Pakasir:", err);
@@ -1393,6 +2115,13 @@
       const resp = await fetch(`/api/payment/status?${q.toString()}`);
       const data = await resp.json();
 
+      if (data.is_sandbox !== undefined) {
+        if (state.currentPaymentOrder) {
+          state.currentPaymentOrder.isSandbox = Boolean(data.is_sandbox);
+        }
+        applySandboxMode(data.is_sandbox);
+      }
+
       if (data.rate_limited) {
         showToast("Gateway Pakasir membatasi cek status tiap 4 detik. Silakan coba kembali sesaat lagi.", "info");
         return;
@@ -1406,7 +2135,7 @@
           userEmail: (activeUser && activeUser.email) || (state.currentPaymentOrder && state.currentPaymentOrder.userEmail),
           completedAt: new Date()
         };
-        await AuthManager.activateSubscription(state.currentPaymentOrder.orderId, state.currentPaymentOrder.amount || 50000, 90);
+        await AuthManager.activateSubscription(state.currentPaymentOrder.orderId, state.currentPaymentOrder.totalPayment || 55500, 90);
 
         // Update ledger transaksi pengguna di Cloud Firestore
         if (window.FirebaseService && FirebaseService.db && activeUser && state.currentPaymentOrder.orderId) {
@@ -1453,7 +2182,7 @@
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           order_id: state.currentPaymentOrder.orderId,
-          amount: state.currentPaymentOrder.amount || 50000
+          amount: state.currentPaymentOrder.totalPayment || state.currentPaymentOrder.amount || 55500
         })
       });
 
@@ -1477,7 +2206,7 @@
         userEmail: (activeUser && activeUser.email) || (state.currentPaymentOrder && state.currentPaymentOrder.userEmail),
         completedAt: new Date()
       };
-      await AuthManager.activateSubscription(state.currentPaymentOrder.orderId, 50000, 90);
+      await AuthManager.activateSubscription(state.currentPaymentOrder.orderId, 55500, 90);
 
       // Update status transaksi simulasi di Cloud Firestore
       if (window.FirebaseService && FirebaseService.db && activeUser && state.currentPaymentOrder.orderId) {
@@ -1558,6 +2287,8 @@
 
     state.editingEntryId = null;
     state.uploadedPhotoBase64 = null;
+    state.selectedAudioFile = null;
+    state.selectedVideoFile = null;
 
     if (DOM.formAddLogbook) DOM.formAddLogbook.reset();
     if (DOM.modalFormTitle) DOM.modalFormTitle.textContent = "Catat Logbook Baru";
@@ -1586,6 +2317,17 @@
     if (DOM.uploadPrompt) DOM.uploadPrompt.classList.remove("hidden");
     if (DOM.dropZone) DOM.dropZone.classList.remove("has-photo");
 
+    // Reset pilihan berkas media wawancara
+    if (DOM.inputAudioMedia) DOM.inputAudioMedia.value = "";
+    if (DOM.inputVideoMedia) DOM.inputVideoMedia.value = "";
+    if (DOM.audioFileSelectedInfo) DOM.audioFileSelectedInfo.classList.add("hidden");
+    if (DOM.videoFileSelectedInfo) DOM.videoFileSelectedInfo.classList.add("hidden");
+    if (DOM.btnChooseAudioMedia) DOM.btnChooseAudioMedia.classList.remove("hidden");
+    if (DOM.btnChooseVideoMedia) DOM.btnChooseVideoMedia.classList.remove("hidden");
+    if (DOM.existingLogbookMediaArea) DOM.existingLogbookMediaArea.classList.add("hidden");
+    if (DOM.existingLogbookMediaList) DOM.existingLogbookMediaList.innerHTML = "";
+    if (DOM.mediaUploadProgressArea) DOM.mediaUploadProgressArea.classList.add("hidden");
+
     if (DOM.modalForm) DOM.modalForm.classList.remove("hidden");
   }
 
@@ -1600,6 +2342,8 @@
 
     state.editingEntryId = entryId;
     state.uploadedPhotoBase64 = item.fotoBase64 || null;
+    state.selectedAudioFile = null;
+    state.selectedVideoFile = null;
 
     if (DOM.modalFormTitle) DOM.modalFormTitle.textContent = "Edit Catatan Logbook";
     if (DOM.modalFormSubtitle) DOM.modalFormSubtitle.textContent = `Memperbarui Aktivitas: ${item.kabupaten} (${item.tanggal})`;
@@ -1661,6 +2405,17 @@
       if (DOM.dropZone) DOM.dropZone.classList.remove("has-photo");
     }
 
+    // Reset pilihan berkas baru dan tampilkan media tersimpan
+    if (DOM.inputAudioMedia) DOM.inputAudioMedia.value = "";
+    if (DOM.inputVideoMedia) DOM.inputVideoMedia.value = "";
+    if (DOM.audioFileSelectedInfo) DOM.audioFileSelectedInfo.classList.add("hidden");
+    if (DOM.videoFileSelectedInfo) DOM.videoFileSelectedInfo.classList.add("hidden");
+    if (DOM.btnChooseAudioMedia) DOM.btnChooseAudioMedia.classList.remove("hidden");
+    if (DOM.btnChooseVideoMedia) DOM.btnChooseVideoMedia.classList.remove("hidden");
+    if (DOM.mediaUploadProgressArea) DOM.mediaUploadProgressArea.classList.add("hidden");
+
+    renderExistingLogbookMedia(item);
+
     if (DOM.modalForm) DOM.modalForm.classList.remove("hidden");
   }
 
@@ -1668,6 +2423,49 @@
     if (DOM.modalForm) DOM.modalForm.classList.add("hidden");
     state.editingEntryId = null;
     state.uploadedPhotoBase64 = null;
+    state.selectedAudioFile = null;
+    state.selectedVideoFile = null;
+    if (DOM.inputAudioMedia) DOM.inputAudioMedia.value = "";
+    if (DOM.inputVideoMedia) DOM.inputVideoMedia.value = "";
+    if (DOM.audioFileSelectedInfo) DOM.audioFileSelectedInfo.classList.add("hidden");
+    if (DOM.videoFileSelectedInfo) DOM.videoFileSelectedInfo.classList.add("hidden");
+    if (DOM.btnChooseAudioMedia) DOM.btnChooseAudioMedia.classList.remove("hidden");
+    if (DOM.btnChooseVideoMedia) DOM.btnChooseVideoMedia.classList.remove("hidden");
+    if (DOM.existingLogbookMediaArea) DOM.existingLogbookMediaArea.classList.add("hidden");
+    if (DOM.existingLogbookMediaList) DOM.existingLogbookMediaList.innerHTML = "";
+    if (DOM.mediaUploadProgressArea) DOM.mediaUploadProgressArea.classList.add("hidden");
+  }
+
+  function handleAudioSelected(file) {
+    if (!file) return;
+    state.selectedAudioFile = file;
+    if (DOM.audioSelectedFileName) DOM.audioSelectedFileName.textContent = file.name;
+    if (DOM.audioSelectedFileSize) DOM.audioSelectedFileSize.textContent = formatBytes(file.size);
+    if (DOM.audioFileSelectedInfo) DOM.audioFileSelectedInfo.classList.remove("hidden");
+    if (DOM.btnChooseAudioMedia) DOM.btnChooseAudioMedia.classList.add("hidden");
+  }
+
+  function clearSelectedAudio() {
+    state.selectedAudioFile = null;
+    if (DOM.inputAudioMedia) DOM.inputAudioMedia.value = "";
+    if (DOM.audioFileSelectedInfo) DOM.audioFileSelectedInfo.classList.add("hidden");
+    if (DOM.btnChooseAudioMedia) DOM.btnChooseAudioMedia.classList.remove("hidden");
+  }
+
+  function handleVideoSelected(file) {
+    if (!file) return;
+    state.selectedVideoFile = file;
+    if (DOM.videoSelectedFileName) DOM.videoSelectedFileName.textContent = file.name;
+    if (DOM.videoSelectedFileSize) DOM.videoSelectedFileSize.textContent = formatBytes(file.size);
+    if (DOM.videoFileSelectedInfo) DOM.videoFileSelectedInfo.classList.remove("hidden");
+    if (DOM.btnChooseVideoMedia) DOM.btnChooseVideoMedia.classList.add("hidden");
+  }
+
+  function clearSelectedVideo() {
+    state.selectedVideoFile = null;
+    if (DOM.inputVideoMedia) DOM.inputVideoMedia.value = "";
+    if (DOM.videoFileSelectedInfo) DOM.videoFileSelectedInfo.classList.add("hidden");
+    if (DOM.btnChooseVideoMedia) DOM.btnChooseVideoMedia.classList.remove("hidden");
   }
 
   function toggleCustomLocationView(isCustom) {
@@ -1906,6 +2704,19 @@
         }
       }
 
+      // Ambil existing wawancara_media jika dalam mode edit
+      let existingMedia = [];
+      if (isEditing) {
+        const prevEntry = state.entries.find(e => e.id === docId);
+        if (prevEntry && Array.isArray(prevEntry.wawancara_media)) {
+          existingMedia = [...prevEntry.wawancara_media];
+        }
+      }
+
+      // Simpan referensi file media baru yang dipilih untuk diunggah di latar belakang
+      const audioToUpload = state.selectedAudioFile;
+      const videoToUpload = state.selectedVideoFile;
+
       const payload = {
         id: docId,
         userId: user ? user.uid : "",
@@ -1925,6 +2736,7 @@
         output,
         fotoUrl: finalFotoUrl,
         fotoBase64: state.uploadedPhotoBase64 || (finalFotoUrl.startsWith("data:image") ? finalFotoUrl : ""),
+        wawancara_media: existingMedia,
         isDummy: false,
         updatedAt: new Date().toISOString()
       };
@@ -1933,7 +2745,7 @@
         payload.createdAt = new Date().toISOString();
       }
 
-      // Simpan ke Firestore
+      // Simpan Catatan Lapangan ke Firestore seketika
       if (window.FirebaseService && FirebaseService.db && user) {
         await FirebaseService.db
           .collection("users")
@@ -1943,7 +2755,7 @@
           .set(payload, { merge: true });
       }
 
-      // Update State Lokal
+      // Update State Lokal seketika
       if (isEditing) {
         const idx = state.entries.findIndex(e => e.id === docId);
         if (idx !== -1) state.entries[idx] = { ...state.entries[idx], ...payload };
@@ -1956,6 +2768,23 @@
       saveEntriesToLocalStorage(state.entries, user);
       closeFormModal();
       updateDashboard();
+      updateWorkspaceNavCounts();
+      if (state.activeWorkspaceTab === "media") {
+        renderMediaGallery();
+      }
+
+      // Alihkan pengunggahan rekaman audio & video ke background queue non-blocking
+      if ((audioToUpload || videoToUpload) && user) {
+        const targetTitle = `${sasaranResponden || jenisKegiatan} - ${kabupaten}`;
+        showToast("Logbook tersimpan. Berkas media sedang dicadangkan ke cloud di latar belakang...", "info");
+        BackgroundMediaManager.enqueue({
+          userId: user.uid,
+          logbookId: docId,
+          targetTitle,
+          audioFile: audioToUpload,
+          videoFile: videoToUpload
+        });
+      }
     } catch (err) {
       console.error("Gagal simpan logbook:", err);
       showToast("Gagal menyimpan: " + err.message, "error");
@@ -2053,8 +2882,12 @@
   // 6. PROFIL RISET & HIRARKI WILAYAH WIZARD
   // ==========================================================================
   function openProfileModal() {
-    const prof = (window.ProfileManager && ProfileManager.currentProfile) || {};
-    if (DOM.profName) DOM.profName.value = prof.name || (AuthManager.currentUser ? AuthManager.currentUser.displayName : "");
+    const user = window.AuthManager ? AuthManager.currentUser : null;
+    const activeProf = (window.ProfileManager && ProfileManager.currentProfile) || {};
+    const isProfileOwner = !activeProf.email || !user || !user.email || (activeProf.email.trim().toLowerCase() === user.email.trim().toLowerCase());
+    const prof = isProfileOwner ? activeProf : {};
+
+    if (DOM.profName) DOM.profName.value = prof.name || (user ? (user.displayName || user.email.split("@")[0]) : "");
     if (DOM.profNim) DOM.profNim.value = prof.nim || "";
     if (DOM.profUniversity) DOM.profUniversity.value = prof.university || "";
     if (DOM.profMajor) DOM.profMajor.value = prof.major || "";
@@ -2317,6 +3150,7 @@
 
     const payload = {
       name: DOM.profName.value.trim(),
+      email: user.email,
       nim: DOM.profNim.value.trim(),
       university: DOM.profUniversity.value.trim(),
       major: DOM.profMajor.value.trim(),
@@ -3017,12 +3851,6 @@
       });
     }
     if (DOM.btnCheckPaymentStatus) DOM.btnCheckPaymentStatus.addEventListener("click", handleCheckPaymentStatus);
-    if (DOM.btnOpenPakasirWebLink) {
-      DOM.btnOpenPakasirWebLink.addEventListener("click", () => {
-        const url = (state.currentPaymentOrder && state.currentPaymentOrder.paymentUrl) || "https://app.pakasir.com/pay-v2";
-        window.open(url, "_blank");
-      });
-    }
     if (DOM.btnSimulateSuccessPayment) DOM.btnSimulateSuccessPayment.addEventListener("click", handleSimulateSuccessPayment);
 
     // Profile Modal
@@ -3230,6 +4058,103 @@
     if (DOM.btnCloseLightbox) {
       DOM.btnCloseLightbox.addEventListener("click", () => {
         if (DOM.modalLightbox) DOM.modalLightbox.classList.add("hidden");
+      });
+    }
+
+    // ==========================================================================
+    // NAVIGASI RUANG KERJA & KOLEKSI MEDIA WAWANCARA (CLOUD STORAGE TERENKRIPSI)
+    // ==========================================================================
+    if (DOM.tabNavLogbook) {
+      DOM.tabNavLogbook.addEventListener("click", () => navigateTo(ROUTES.DASHBOARD));
+    }
+    if (DOM.tabNavMedia) {
+      DOM.tabNavMedia.addEventListener("click", () => navigateTo(ROUTES.MEDIA));
+    }
+    if (DOM.btnMediaBackToDashboard) {
+      DOM.btnMediaBackToDashboard.addEventListener("click", () => navigateTo(ROUTES.DASHBOARD));
+    }
+    if (DOM.btnMediaOpenAddLogbook) {
+      DOM.btnMediaOpenAddLogbook.addEventListener("click", openAddModal);
+    }
+    if (DOM.btnEmptyGoAddLogbook) {
+      DOM.btnEmptyGoAddLogbook.addEventListener("click", openAddModal);
+    }
+
+    // Pencarian & Filter Pill Galeri Media
+    if (DOM.inputSearchMedia) {
+      DOM.inputSearchMedia.addEventListener("input", function () {
+        state.mediaSearchQuery = this.value;
+        renderMediaGallery();
+      });
+    }
+
+    document.querySelectorAll(".media-pill").forEach(pill => {
+      pill.addEventListener("click", function () {
+        document.querySelectorAll(".media-pill").forEach(p => p.classList.remove("active"));
+        this.classList.add("active");
+        state.mediaFilterType = this.dataset.mediaFilter || "all";
+        renderMediaGallery();
+      });
+    });
+
+    // Delegasi Klik Tombol "Lacak Catatan Logbook" pada Galeri Media
+    if (DOM.mediaCardsGrid) {
+      DOM.mediaCardsGrid.addEventListener("click", (e) => {
+        const btnTrack = e.target.closest('[data-action="track-logbook"]');
+        if (btnTrack && btnTrack.dataset.logbookId) {
+          trackLogbookFromMedia(btnTrack.dataset.logbookId);
+        }
+      });
+    }
+
+    // Pemilih Berkas Audio Wawancara
+    if (DOM.btnChooseAudioMedia && DOM.inputAudioMedia) {
+      DOM.btnChooseAudioMedia.addEventListener("click", () => DOM.inputAudioMedia.click());
+      DOM.inputAudioMedia.addEventListener("change", function () {
+        if (this.files && this.files[0]) handleAudioSelected(this.files[0]);
+      });
+    }
+    if (DOM.btnClearAudioMedia) {
+      DOM.btnClearAudioMedia.addEventListener("click", clearSelectedAudio);
+    }
+
+    // Pemilih Berkas Video Wawancara
+    if (DOM.btnChooseVideoMedia && DOM.inputVideoMedia) {
+      DOM.btnChooseVideoMedia.addEventListener("click", () => DOM.inputVideoMedia.click());
+      DOM.inputVideoMedia.addEventListener("change", function () {
+        if (this.files && this.files[0]) handleVideoSelected(this.files[0]);
+      });
+    }
+    if (DOM.btnClearVideoMedia) {
+      DOM.btnClearVideoMedia.addEventListener("click", clearSelectedVideo);
+    }
+
+    // Delegasi Hapus Media Tersimpan pada Modal Edit
+    if (DOM.existingLogbookMediaList) {
+      DOM.existingLogbookMediaList.addEventListener("click", (e) => {
+        const btnRemove = e.target.closest(".btn-remove-existing-media");
+        if (btnRemove && btnRemove.dataset.mediaIdx !== undefined) {
+          handleRemoveExistingMedia(parseInt(btnRemove.dataset.mediaIdx, 10));
+        }
+      });
+    }
+
+    // Kontrol Widget Floating Background Upload
+    if (DOM.btnToggleMinimizeUploadWidget && DOM.bgUploadCard) {
+      DOM.btnToggleMinimizeUploadWidget.addEventListener("click", () => {
+        DOM.bgUploadCard.classList.toggle("minimized");
+      });
+    }
+    if (DOM.btnCloseUploadWidget && DOM.bgUploadWidget) {
+      DOM.btnCloseUploadWidget.addEventListener("click", () => {
+        DOM.bgUploadWidget.classList.add("hidden");
+      });
+    }
+    if (DOM.btnRetryUpload) {
+      DOM.btnRetryUpload.addEventListener("click", () => {
+        if (BackgroundMediaManager.activeTask) {
+          BackgroundMediaManager.executeTask(BackgroundMediaManager.activeTask);
+        }
       });
     }
   }

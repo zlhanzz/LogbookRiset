@@ -8,7 +8,6 @@
 
 const CategoryManager = {
   categories: [],
-  STORAGE_KEY: "LOGBOOK_SAVED_CATEGORIES_V3",
 
   defaultCategories: [
     "Wawancara Petani Responden",
@@ -19,11 +18,21 @@ const CategoryManager = {
     "Dokumentasi & Koordinasi Aparat Desa"
   ],
 
+  resetCategories() {
+    this.categories = [...this.defaultCategories];
+  },
+
+  getStorageKey(uid) {
+    if (!uid) return null;
+    return `LOGBOOK_SAVED_CATEGORIES_V3_${uid}`;
+  },
+
   /**
-   * Inisialisasi daftar kategori
+   * Inisialisasi daftar kategori dengan isolasi ketat per UID
    */
   async init(user) {
-    this.loadFromCache();
+    const uid = user ? user.uid : null;
+    this.loadFromCache(uid);
 
     if (user && !user.isDemo && window.FirebaseService && FirebaseService.db) {
       try {
@@ -38,11 +47,12 @@ const CategoryManager = {
           const data = docSnap.data();
           if (Array.isArray(data.list) && data.list.length > 0) {
             this.categories = data.list;
-            this.saveToCache();
+            this.saveToCache(uid);
           }
         } else {
           // Simpan default categories pertama kali
           await this.saveToFirestore(user.uid, this.categories);
+          this.saveToCache(uid);
         }
       } catch (e) {
         console.warn("Gagal memuat kategori dari Firestore:", e.message);
@@ -52,9 +62,14 @@ const CategoryManager = {
     return this.categories;
   },
 
-  loadFromCache() {
+  loadFromCache(uid) {
+    if (!uid) {
+      this.resetCategories();
+      return;
+    }
     try {
-      const saved = localStorage.getItem(this.STORAGE_KEY);
+      const key = this.getStorageKey(uid);
+      const saved = key ? localStorage.getItem(key) : null;
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
@@ -68,9 +83,15 @@ const CategoryManager = {
     }
   },
 
-  saveToCache() {
+  saveToCache(uid) {
+    const activeUid = uid || (window.AuthManager && AuthManager.currentUser ? AuthManager.currentUser.uid : null);
+    if (!activeUid) return;
     try {
-      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(this.categories));
+      const key = this.getStorageKey(activeUid);
+      if (key) {
+        localStorage.setItem(key, JSON.stringify(this.categories));
+      }
+      localStorage.removeItem("LOGBOOK_SAVED_CATEGORIES_V3");
     } catch (e) {
       console.warn("Gagal menyimpan cache kategori:", e);
     }
@@ -107,7 +128,7 @@ const CategoryManager = {
     const exists = this.categories.some(c => c.toLowerCase() === cleanName.toLowerCase());
     if (!exists) {
       this.categories.push(cleanName);
-      this.saveToCache();
+      this.saveToCache(user ? user.uid : null);
       if (user && !user.isDemo) {
         await this.saveToFirestore(user.uid, this.categories);
       }
@@ -127,7 +148,7 @@ const CategoryManager = {
     const idx = this.categories.findIndex(c => c.toLowerCase() === cleanOld.toLowerCase());
     if (idx !== -1) {
       this.categories[idx] = cleanNew;
-      this.saveToCache();
+      this.saveToCache(user ? user.uid : null);
       if (user && !user.isDemo) {
         await this.saveToFirestore(user.uid, this.categories);
       }
@@ -153,7 +174,7 @@ const CategoryManager = {
   async deleteCategory(name, user) {
     const cleanName = String(name || "").trim().toLowerCase();
     this.categories = this.categories.filter(c => c.toLowerCase() !== cleanName);
-    this.saveToCache();
+    this.saveToCache(user ? user.uid : null);
     if (user && !user.isDemo) {
       await this.saveToFirestore(user.uid, this.categories);
     }

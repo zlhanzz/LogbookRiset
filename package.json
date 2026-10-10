@@ -13,5 +13,8 @@
     "mahasiswa",
     "google-sheets",
     "docx"
-  ]
+  ],
+  "dependencies": {
+    "googleapis": "^185.0.0"
+  }
 }

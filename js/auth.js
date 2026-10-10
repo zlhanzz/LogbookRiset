@@ -10,7 +10,7 @@ const AuthManager = {
   subscription: {
     status: "inactive",
     activeUntil: null,
-    amount: 50000,
+    amount: 55500,
     orderId: null
   },
   onUserChangedCallbacks: [],
@@ -28,7 +28,7 @@ const AuthManager = {
     return {
       status: "inactive",
       activeUntil: null,
-      amount: 50000,
+      amount: 55500,
       orderId: null
     };
   },
@@ -232,7 +232,7 @@ const AuthManager = {
             plan: "pro",
             activatedAt: data.createdAt || new Date().toISOString(),
             activeUntil: new Date(Date.now() + 90 * 86400000).toISOString(),
-            amount: 50000,
+            amount: 55500,
             orderId: "LEGACY-PRO"
           };
           await userRef.set({
@@ -282,7 +282,7 @@ const AuthManager = {
             plan: "free",
             activatedAt: null,
             activeUntil: null,
-            amount: 50000,
+            amount: 55500,
             orderId: null
           },
           hasPaid: false,
@@ -366,7 +366,7 @@ const AuthManager = {
   /**
    * Aktivasi langganan (dipanggil setelah pembayaran Pakasir sukses)
    */
-  async activateSubscription(orderId, amount = 50000, days = 90) {
+  async activateSubscription(orderId, amount = 55500, days = 90) {
     if (!this.currentUser || !this.currentUser.uid) {
       console.warn("activateSubscription dipanggil tanpa currentUser!");
       return null;
@@ -409,6 +409,12 @@ const AuthManager = {
     if (!FirebaseService.auth) {
       throw new Error("Firebase Auth belum aktif. Periksa koneksi internet Anda.");
     }
+    if (window.ProfileManager && typeof ProfileManager.resetProfile === "function") {
+      ProfileManager.resetProfile();
+    }
+    if (window.CategoryManager && typeof CategoryManager.resetCategories === "function") {
+      CategoryManager.resetCategories();
+    }
     const provider = new firebase.auth.GoogleAuthProvider();
     provider.setCustomParameters({ prompt: 'select_account' });
     const result = await FirebaseService.auth.signInWithPopup(provider);
@@ -422,6 +428,12 @@ const AuthManager = {
     if (!FirebaseService.auth) {
       throw new Error("Firebase Auth belum aktif.");
     }
+    if (window.ProfileManager && typeof ProfileManager.resetProfile === "function") {
+      ProfileManager.resetProfile();
+    }
+    if (window.CategoryManager && typeof CategoryManager.resetCategories === "function") {
+      CategoryManager.resetCategories();
+    }
     const result = await FirebaseService.auth.signInWithEmailAndPassword(email, password);
     return result.user;
   },
@@ -434,8 +446,18 @@ const AuthManager = {
       throw new Error("Firebase Auth belum aktif.");
     }
 
-    // Reset status langganan lokal sebelum akun baru dibuat
+    // Reset status profil, kategori, dan langganan lokal sebelum akun baru dibuat
     this.subscription = this.getDefaultSubscription();
+    if (window.ProfileManager && typeof ProfileManager.resetProfile === "function") {
+      ProfileManager.resetProfile();
+    }
+    if (window.CategoryManager && typeof CategoryManager.resetCategories === "function") {
+      CategoryManager.resetCategories();
+    }
+    try {
+      localStorage.removeItem("LOGBOOK_RESEARCH_PROFILE_V3");
+      localStorage.removeItem("LOGBOOK_SAVED_CATEGORIES_V3");
+    } catch (e) {}
 
     const result = await FirebaseService.auth.createUserWithEmailAndPassword(email, password);
     const user = result.user;
@@ -475,7 +497,7 @@ const AuthManager = {
               plan: "free",
               activatedAt: null,
               activeUntil: null,
-              amount: 50000,
+              amount: 55500,
               orderId: null
             },
             hasPaid: false,
@@ -583,8 +605,20 @@ const AuthManager = {
     this.currentUser = null;
     this.userProfile = null;
     this.subscription = this.getDefaultSubscription();
+
+    // Reset status in-memory ProfileManager & CategoryManager
+    if (window.ProfileManager && typeof ProfileManager.resetProfile === "function") {
+      ProfileManager.resetProfile();
+    }
+    if (window.CategoryManager && typeof CategoryManager.resetCategories === "function") {
+      CategoryManager.resetCategories();
+    }
+
     try {
       localStorage.removeItem(this.STORAGE_KEYS.LOCAL_SUBSCRIPTION);
+      localStorage.removeItem(this.STORAGE_KEYS.LOCAL_USER);
+      localStorage.removeItem("LOGBOOK_RESEARCH_PROFILE_V3");
+      localStorage.removeItem("LOGBOOK_SAVED_CATEGORIES_V3");
     } catch (e) {}
     this.notifyUserChanged();
   },

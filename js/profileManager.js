@@ -10,14 +10,15 @@
 
 const ProfileManager = {
   currentProfile: null,
-  STORAGE_KEY: "LOGBOOK_RESEARCH_PROFILE_V3",
 
   defaultProfile: {
     name: "",
+    email: "",
     nim: "",
     major: "",
     university: "",
     researchTopic: "",
+    topic: "",
     supervisor: "",
     supervisorNip: "",
     timezone: "WITA", // WIB | WITA | WIT
@@ -26,8 +27,12 @@ const ProfileManager = {
     updatedAt: null
   },
 
+  resetProfile() {
+    this.currentProfile = { ...this.defaultProfile };
+  },
+
   getStorageKey(uid) {
-    if (!uid) return "LOGBOOK_RESEARCH_PROFILE_V3";
+    if (!uid) return null;
     return `LOGBOOK_RESEARCH_PROFILE_V3_${uid}`;
   },
 
@@ -194,29 +199,52 @@ const ProfileManager = {
   },
 
   /**
-   * Inisialisasi profil dari LocalStorage dan Firestore
+   * Inisialisasi profil dari LocalStorage dan Firestore dengan isolasi multi-tenant ketat
    */
   async init(user) {
-    const uid = user ? user.uid : null;
-    this.loadFromCache(uid);
+    if (!user || !user.uid) {
+      this.resetProfile();
+      return this.currentProfile;
+    }
 
-    if (user && !user.isDemo && typeof window !== "undefined" && window.FirebaseService && window.FirebaseService.db) {
+    const uid = user.uid;
+    const cleanDefault = {
+      ...this.defaultProfile,
+      name: user.displayName || (user.email ? user.email.split("@")[0] : "Peneliti"),
+      email: user.email || ""
+    };
+
+    // 1. Mulai dengan profil bersih default akun aktif (mencegah residu sesi akun sebelumnya)
+    this.currentProfile = { ...cleanDefault };
+
+    // 2. Muat cache lokal spesifik UID ini (HANYA jika emailnya cocok)
+    this.loadFromCache(uid, user.email);
+
+    if (!user.isDemo && typeof window !== "undefined" && window.FirebaseService && window.FirebaseService.db) {
       try {
-        // 1. Cek dokumen utama users/{uid} terlebih dahulu (Single Source of Truth)
+        // 3. Cek dokumen utama users/{uid} terlebih dahulu (Single Source of Truth)
         const userDocSnap = await window.FirebaseService.db
           .collection("users")
           .doc(user.uid)
           .get();
 
         let remoteData = null;
+        let isContaminated = false;
+
         if (userDocSnap.exists) {
           const udata = userDocSnap.data() || {};
-          if (udata.nim || udata.university || udata.major || udata.supervisor || (udata.locations && udata.locations.length)) {
+
+          // Deteksi kebocoran: jika dokumen Firestore memiliki email akun lain yang berbeda
+          if (udata.email && user.email && udata.email.trim().toLowerCase() !== user.email.trim().toLowerCase()) {
+            console.warn(`[SECURITY HEAL] Terdeteksi kontaminasi email (${udata.email} vs ${user.email}). Memulihkan profil pengguna...`);
+            isContaminated = true;
+          } else if (udata.hasCompletedProfile || udata.nim || udata.university || udata.major || (udata.locations && udata.locations.length)) {
             const rawLocs = udata.locations || [];
             const normalizedLocs = this.normalizeLocations(rawLocs);
 
             remoteData = {
-              name: udata.name || user.displayName || "",
+              name: udata.name || user.displayName || cleanDefault.name,
+              email: user.email,
               nim: udata.nim || "",
               university: udata.university || "",
               major: udata.major || "",
@@ -239,8 +267,8 @@ const ProfileManager = {
           }
         }
 
-        // 2. Fallback backward-compatibility jika profil tersimpan di subkoleksi meta/profile
-        if (!remoteData) {
+        // Cek fallback legacy meta/profile (hanya jika data utama belum terisi dan tidak terkontaminasi)
+        if (!remoteData && !isContaminated) {
           const docSnap = await window.FirebaseService.db
             .collection("users")
             .doc(user.uid)
@@ -249,22 +277,31 @@ const ProfileManager = {
             .get();
 
           if (docSnap.exists) {
-            remoteData = docSnap.data();
-            if (remoteData && remoteData.locations) {
-              remoteData.locations = this.normalizeLocations(remoteData.locations);
+            const mData = docSnap.data() || {};
+            if (mData.email && user.email && mData.email.trim().toLowerCase() !== user.email.trim().toLowerCase()) {
+              console.warn(`[SECURITY HEAL] Subkoleksi meta/profile tercemar email asing (${mData.email}). Mengabaikan...`);
+              isContaminated = true;
+            } else if (mData.name || mData.nim || (mData.locations && mData.locations.length)) {
+              remoteData = {
+                ...mData,
+                email: user.email,
+                locations: this.normalizeLocations(mData.locations || [])
+              };
             }
           }
         }
 
-        if (remoteData) {
-          this.currentProfile = { ...this.defaultProfile, ...remoteData };
+        if (isContaminated) {
+          // Pulihkan Firestore dokumen akun ini ke identitas sah akun aktif
+          this.currentProfile = { ...cleanDefault };
           this.saveToCache(uid);
-        } else if (!this.currentProfile || !this.currentProfile.name) {
-          this.currentProfile = {
-            ...this.defaultProfile,
-            name: user.displayName || "",
-            email: user.email || ""
-          };
+          await this.saveProfile(cleanDefault, user);
+        } else if (remoteData) {
+          this.currentProfile = { ...cleanDefault, ...remoteData, email: user.email };
+          this.saveToCache(uid);
+        } else {
+          // Akun baru bersih: gunakan cleanDefault
+          this.currentProfile = { ...cleanDefault };
           this.saveToCache(uid);
         }
       } catch (err) {
@@ -279,34 +316,44 @@ const ProfileManager = {
     return this.currentProfile;
   },
 
-  loadFromCache(uid) {
+  loadFromCache(uid, expectedEmail = null) {
+    if (!uid) {
+      this.resetProfile();
+      return;
+    }
     try {
-      const activeUid = uid || (window.AuthManager && AuthManager.currentUser ? AuthManager.currentUser.uid : null);
-      const key = this.getStorageKey(activeUid);
-      let saved = localStorage.getItem(key);
-      if (!saved && activeUid) {
-        saved = localStorage.getItem(this.STORAGE_KEY);
-      }
+      const key = this.getStorageKey(uid);
+      const saved = key ? localStorage.getItem(key) : null;
       if (saved) {
         const parsed = JSON.parse(saved);
+        // Validasi kepemilikan email jika diberikan untuk mencegah kontaminasi
+        if (expectedEmail && parsed.email && parsed.email.trim().toLowerCase() !== expectedEmail.trim().toLowerCase()) {
+          console.warn("[SECURITY] Cache profil milik email lain ditemukan. Mengabaikan cache.");
+          this.resetProfile();
+          return;
+        }
         if (parsed.locations) {
           parsed.locations = this.normalizeLocations(parsed.locations);
         }
         this.currentProfile = { ...this.defaultProfile, ...parsed };
-      } else {
-        this.currentProfile = { ...this.defaultProfile };
+        if (expectedEmail) this.currentProfile.email = expectedEmail;
+        return;
       }
     } catch (e) {
-      this.currentProfile = { ...this.defaultProfile };
+      // ignore
     }
+    this.resetProfile();
   },
 
   saveToCache(uid) {
+    if (!uid) return;
     try {
-      const activeUid = uid || (window.AuthManager && AuthManager.currentUser ? AuthManager.currentUser.uid : null);
-      const key = this.getStorageKey(activeUid);
-      localStorage.setItem(key, JSON.stringify(this.currentProfile));
-      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(this.currentProfile));
+      const key = this.getStorageKey(uid);
+      if (key) {
+        localStorage.setItem(key, JSON.stringify(this.currentProfile));
+      }
+      // Hapus key un-namespaced lama untuk mencegah kebocoran antar akun
+      localStorage.removeItem("LOGBOOK_RESEARCH_PROFILE_V3");
     } catch (e) {
       console.warn("Gagal menyimpan cache profil:", e);
     }
@@ -340,7 +387,10 @@ const ProfileManager = {
    * Simpan profil ke LocalStorage & Firestore (Menyatu di Dokumen Utama Pengguna)
    */
   async saveProfile(profileData, user) {
-    const uid = user ? user.uid : null;
+    const activeUser = user || (typeof window !== "undefined" && window.AuthManager ? window.AuthManager.currentUser : null);
+    const uid = activeUser ? activeUser.uid : null;
+    const userEmail = activeUser ? activeUser.email : (this.currentProfile ? this.currentProfile.email : "");
+
     const isComplete = this.validateCompleteness({
       ...this.currentProfile,
       ...profileData
@@ -348,6 +398,7 @@ const ProfileManager = {
     const updated = {
       ...this.currentProfile,
       ...profileData,
+      email: userEmail,
       isComplete,
       updatedAt: new Date().toISOString()
     };
@@ -359,20 +410,21 @@ const ProfileManager = {
     this.currentProfile = updated;
     this.saveToCache(uid);
 
-    if (user && !user.isDemo && typeof window !== "undefined" && window.FirebaseService && window.FirebaseService.db) {
+    if (activeUser && !activeUser.isDemo && typeof window !== "undefined" && window.FirebaseService && window.FirebaseService.db) {
       try {
         // Simpan langsung ke dokumen utama users/{uid} agar schema konsisten di Firestore
         await window.FirebaseService.db
           .collection("users")
-          .doc(user.uid)
+          .doc(activeUser.uid)
           .set({
             name: updated.name,
-            nim: updated.nim,
-            university: updated.university,
-            major: updated.major,
-            topic: updated.topic || updated.researchTopic,
-            researchTopic: updated.researchTopic || updated.topic,
-            supervisor: updated.supervisor,
+            email: userEmail,
+            nim: updated.nim || "",
+            university: updated.university || "",
+            major: updated.major || "",
+            topic: updated.topic || updated.researchTopic || "",
+            researchTopic: updated.researchTopic || updated.topic || "",
+            supervisor: updated.supervisor || "",
             supervisorNip: updated.supervisorNip || "",
             timezone: updated.timezone || "WITA",
             locations: updated.locations || [],
@@ -383,10 +435,13 @@ const ProfileManager = {
         // Simpan salinan di meta/profile untuk kompatibilitas data
         await window.FirebaseService.db
           .collection("users")
-          .doc(user.uid)
+          .doc(activeUser.uid)
           .collection("meta")
           .doc("profile")
-          .set(updated, { merge: true });
+          .set({
+            ...updated,
+            email: userEmail
+          }, { merge: true });
       } catch (err) {
         console.error("Gagal menyimpan profil ke Firestore:", err);
       }
