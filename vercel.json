@@ -29,6 +29,24 @@
           "value": "1; mode=block"
         }
       ]
+    },
+    {
+      "source": "/assets/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=86400, s-maxage=31536000, stale-while-revalidate=86400"
+        }
+      ]
+    },
+    {
+      "source": "/(favicon\\.ico|site\\.webmanifest)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=86400, s-maxage=86400"
+        }
+      ]
     }
   ]
 }

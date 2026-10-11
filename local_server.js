@@ -613,25 +613,37 @@ const server = http.createServer(async (req, res) => {
     }
   }
 
-  // Endpoint API /api/payment/webhook: Menerima notifikasi pembayaran dari Pakasir
-  if (urlPath === '/api/payment/webhook' && req.method === 'POST') {
-    const env = loadEnv();
-    const secret = req.headers['x-secret'] || '';
-    const expectedSecret = env.PAKASIR_WEBHOOK_SECRET || '';
-
-    if (expectedSecret && secret !== expectedSecret) {
-      return sendJson(res, 401, { success: false, message: 'Invalid X-Secret webhook header' });
+  // Endpoint API /api/payment/webhook & /api/webhook: Health Check (GET) dan Notifikasi Pembayaran (POST)
+  if ((urlPath === '/api/payment/webhook' || urlPath === '/api/webhook')) {
+    if (req.method === 'GET') {
+      return sendJson(res, 200, {
+        success: true,
+        status: 'active',
+        service: 'LogbookRiset Pakasir Webhook Endpoint',
+        timestamp: new Date().toISOString()
+      });
     }
 
-    const body = await readBody(req);
-    console.log('🔔 Webhook Pakasir Diterima:', JSON.stringify(body));
+    if (req.method === 'POST') {
+      const env = loadEnv();
+      const secret = req.headers['x-secret'] || '';
+      const expectedSecret = env.PAKASIR_WEBHOOK_SECRET || '';
 
-    return sendJson(res, 200, {
-      success: true,
-      received: true,
-      order_id: body.order_id,
-      status: body.status || 'completed'
-    });
+      if (secret && expectedSecret && secret !== expectedSecret) {
+        return sendJson(res, 401, { success: false, message: 'Invalid X-Secret webhook header' });
+      }
+
+      const body = await readBody(req);
+      console.log('🔔 Webhook Pakasir Diterima:', JSON.stringify(body));
+
+      return sendJson(res, 200, {
+        success: true,
+        received: true,
+        order_id: body.order_id || null,
+        status: body.status || 'completed',
+        message: 'Webhook processed successfully'
+      });
+    }
   }
 
   let filePath = path.join(PUBLIC_DIR, urlPath === '/' ? 'index.html' : urlPath);

@@ -8,12 +8,16 @@
     <priority>1.0</priority>
     <image:image>
       <image:loc>https://logbookriset.web.id/assets/img/og-preview.png</image:loc>
-      <image:title>Logbook Penelitian &amp; Riset Lapangan backup dokumentasi 5 TB dan Export Log ke (.docx)</image:title>
-      <image:caption>Sistem logbook riset dan penelitian lapangan dengan backup dokumentasi 5 TB dan export format .docx bebas edit.</image:caption>
+      <image:title>Logbook Riset Lapangan, Backup Dokumentasi ke Cloud, Auto Transcript Wawancara, Export Logbook Ke Word</image:title>
+      <image:caption>Catat Logbook di HP, Backup Dokumentasi Penelitian (Foto, Video &amp; Rekaman di Cloud), Auto Transkrip Rekaman Wawancara, Export Logbook ke Word (.Docx).</image:caption>
     </image:image>
     <image:image>
       <image:loc>https://logbookriset.web.id/assets/img/logo-horizontal.png</image:loc>
       <image:title>Logo Resmi LogbookRiset.web.id</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://logbookriset.web.id/assets/img/favicon-96x96.png</image:loc>
+      <image:title>Ikon Logo LogbookRiset.web.id</image:title>
     </image:image>
   </url>
   <url>
