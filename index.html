@@ -1,12 +1,266 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8">
+    <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="theme-color" content="#064e3b">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <title>LogbookRiset.id - Sistem Otomasi Logbook Penelitian Lapangan</title>
+  
+  <!-- Favicon & PWA Icons -->
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/img/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/assets/img/favicon-16x16.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/assets/img/apple-touch-icon.png">
+  <link rel="manifest" href="/site.webmanifest">
+
+  <!-- SEO Primer & Metadata Pencarian Tingkat Lanjut (SEO & GEO Master) -->
+  <title>Logbook Penelitian &amp; Riset Lapangan Otomatis ke Dokumen Word (.docx) | LogbookRiset.web.id</title>
+  <meta name="description" content="Platform resmi otomasi logbook penelitian dan riset lapangan terpadu di Indonesia. Catat aktivitas observasi harian, foto berkoordinat GPS, brankas rekaman wawancara 5TB, dan ekspor instan tabel Word (.docx) Landscape A4 berlembar pengesahan supervisor.">
+  <meta name="keywords" content="logbook penelitian, logbook riset, catatan penelitian, format logbook penelitian docx, contoh logbook penelitian lapangan, aplikasi logbook riset, logbook penelitian skripsi, logbook tesis, logbook penelitian dosen, template logbook word landscape, buku catatan riset, lembar pengesahan logbook penelitian, logbook kkn tematik, logbook pkm">
+  <meta name="author" content="LogbookRiset.web.id">
+  <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
+  <meta name="googlebot" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
+  <meta name="bingbot" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
+  <link rel="canonical" href="https://logbookriset.web.id/">
+
+  <!-- Penanda Geografis & Bahasa (Local SEO Indonesia) -->
+  <meta name="geo.region" content="ID">
+  <meta name="geo.placename" content="Indonesia">
+  <meta name="language" content="Indonesian">
+  <meta http-equiv="content-language" content="id">
+
+  <!-- Open Graph / Rich Social Preview -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://logbookriset.web.id/">
+  <meta property="og:title" content="Logbook Penelitian &amp; Riset Lapangan Otomatis ke Dokumen Word (.docx)">
+  <meta property="og:description" content="Platform resmi pencatatan logbook penelitian lapangan digital di Indonesia. Stempel koordinat GPS pada foto, brankas media wawancara 5TB, dan ekspor instan tabel Word (.docx) Landscape A4 berlembar pengesahan.">
+  <meta property="og:image" content="https://logbookriset.web.id/assets/img/og-preview.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:locale" content="id_ID">
+  <meta property="og:site_name" content="LogbookRiset.web.id">
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:url" content="https://logbookriset.web.id/">
+  <meta name="twitter:title" content="Logbook Penelitian &amp; Riset Lapangan Otomatis ke Dokumen Word (.docx)">
+  <meta name="twitter:description" content="Platform terstandar untuk pencatatan logbook penelitian dan riset lapangan. Rekapitulasi otomatis ke format dokumen Word (.docx) berlembar pengesahan.">
+  <meta name="twitter:image" content="https://logbookriset.web.id/assets/img/og-preview.png">
+
+  <!-- Schema.org Data Terstruktur untuk Mesin Pencari & AI Agents (GEO & Rich Results) -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebSite",
+        "@id": "https://logbookriset.web.id/#website",
+        "url": "https://logbookriset.web.id/",
+        "name": "LogbookRiset",
+        "alternateName": [
+          "LogbookRiset.web.id",
+          "Logbook Riset Lapangan",
+          "Aplikasi Logbook Penelitian",
+          "Format Logbook Riset Word Landscape"
+        ],
+        "description": "Platform resmi pencatatan logbook penelitian lapangan dan riset akademik terstandar di Indonesia.",
+        "inLanguage": "id-ID",
+        "publisher": {
+          "@id": "https://logbookriset.web.id/#organization"
+        }
+      },
+      {
+        "@type": "Organization",
+        "@id": "https://logbookriset.web.id/#organization",
+        "name": "LogbookRiset Indonesia",
+        "url": "https://logbookriset.web.id/",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://logbookriset.web.id/assets/img/logo-horizontal.png",
+          "width": 600,
+          "height": 160
+        },
+        "image": "https://logbookriset.web.id/assets/img/og-preview.png",
+        "description": "Penyedia teknologi digital terstandar untuk otomasi pencatatan logbook penelitian ilmiah dan riset lapangan."
+      },
+      {
+        "@type": "SoftwareApplication",
+        "@id": "https://logbookriset.web.id/#software",
+        "name": "LogbookRiset",
+        "alternateName": "LogbookRiset.web.id",
+        "applicationCategory": "EducationalApplication, BusinessApplication",
+        "applicationSubCategory": "Research Management, Field Data Collection, Academic Documentation",
+        "operatingSystem": "Web, All Modern Browsers (Chrome, Safari, Firefox, Edge) on Android, iOS, Windows, macOS",
+        "url": "https://logbookriset.web.id/",
+        "description": "Aplikasi berbasis web untuk mencatat aktivitas logbook penelitian lapangan dan riset akademik terpadu dengan sinkronisasi cloud real-time, stempel koordinat GPS pada foto, brankas rekaman wawancara hingga 5TB, dan ekspor instan tabel Word (.docx) Landscape A4 berlembar pengesahan.",
+        "image": "https://logbookriset.web.id/assets/img/og-preview.png",
+        "offers": {
+          "@type": "Offer",
+          "price": "55500",
+          "priceCurrency": "IDR",
+          "priceValidUntil": "2027-12-31",
+          "availability": "https://schema.org/InStock",
+          "url": "https://logbookriset.web.id/pricing",
+          "description": "Akses Riset Penuh 90 Hari (3 Bulan Penuh) Tanpa Batas Catatan dan Ekspor Word"
+        },
+        "aggregateRating": {
+          "@type": "AggregateRating",
+          "ratingValue": "4.9",
+          "reviewCount": "128",
+          "bestRating": "5",
+          "worstRating": "1"
+        },
+        "featureList": [
+          "Ekspor Dokumen Word (.docx) Format Landscape A4 8 Kolom Standar",
+          "Lembar Pengesahan Resmi Supervisor Riset & Penanggung Jawab Penelitian",
+          "Dokumentasi Foto Lapangan Terintegrasi Koordinat GPS & Tanggal Riil",
+          "Brankas Media Cloud hingga 5TB untuk Rekaman Suara dan Video Wawancara",
+          "Pencatatan Hierarki Wilayah Administratif 5 Tingkat (Provinsi s/d Dusun)",
+          "Dukungan Penuh 3 Zona Waktu Riset Indonesia (WIB, WITA, WIT)",
+          "Kategori Kegiatan Adaptif (Wawancara, Observasi, Sampel, FGD, Kustom)",
+          "Penyimpanan Cloud Terenkripsi Google Firestore & Cloud Storage"
+        ]
+      },
+      {
+        "@type": "HowTo",
+        "@id": "https://logbookriset.web.id/#howto",
+        "name": "Cara Membuat dan Mengisi Logbook Penelitian Lapangan serta Ekspor ke Dokumen Word (.docx)",
+        "description": "Panduan langkah demi langkah mencatat aktivitas penelitian lapangan harian secara terstruktur dan mengekspornya langsung ke berkas Microsoft Word (.docx) berformat Landscape A4 berlembar pengesahan.",
+        "totalTime": "PT5M",
+        "step": [
+          {
+            "@type": "HowToStep",
+            "position": 1,
+            "name": "Akses Aplikasi & Lengkapi Profil Riset",
+            "text": "Buka LogbookRiset.web.id dari HP atau laptop, lalu tentukan identitas riset meliputi nama peneliti, nomor registrasi riset, institusi, nama supervisor riset utama, dan topik penelitian.",
+            "url": "https://logbookriset.web.id/login"
+          },
+          {
+            "@type": "HowToStep",
+            "position": 2,
+            "name": "Catat Aktivitas Lapangan Harian",
+            "text": "Tekan tombol Catat Aktivitas Baru di lokasi riset. Pilih kategori kegiatan (wawancara, observasi, dll.), ambil foto dengan stempel koordinat GPS otomatis, pilih wilayah administratif, dan lampirkan rekaman suara atau video narasumber.",
+            "url": "https://logbookriset.web.id/"
+          },
+          {
+            "@type": "HowToStep",
+            "position": 3,
+            "name": "Ekspor Instan ke Dokumen Word (.docx) Landscape A4",
+            "text": "Setelah catatan terhimpun, klik tombol Ekspor Logbook Word. Dokumen .docx berformat Landscape A4 8 kolom lengkap dengan kop surat institusi dan lembar pengesahan supervisor langsung terunduh siap cetak atau lampiran laporan.",
+            "url": "https://logbookriset.web.id/#preview-word"
+          }
+        ]
+      },
+      {
+        "@type": "BreadcrumbList",
+        "@id": "https://logbookriset.web.id/#breadcrumb",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Beranda",
+            "item": "https://logbookriset.web.id/"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Format Word Landscape",
+            "item": "https://logbookriset.web.id/#preview-word"
+          },
+          {
+            "@type": "ListItem",
+            "position": 3,
+            "name": "Fitur Riset",
+            "item": "https://logbookriset.web.id/#fitur"
+          },
+          {
+            "@type": "ListItem",
+            "position": 4,
+            "name": "Tanya Jawab (FAQ)",
+            "item": "https://logbookriset.web.id/#faq"
+          },
+          {
+            "@type": "ListItem",
+            "position": 5,
+            "name": "Paket Akses",
+            "item": "https://logbookriset.web.id/pricing"
+          }
+        ]
+      },
+      {
+        "@type": "FAQPage",
+        "@id": "https://logbookriset.web.id/#faq-schema",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Apa itu LogbookRiset.web.id dan untuk siapa platform ini dirancang?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "LogbookRiset.web.id adalah platform resmi untuk pencatatan logbook penelitian lapangan dan riset akademik di Indonesia. Dirancang khusus untuk mahasiswa tingkat akhir (skripsi, tesis, disertasi), dosen pelaksana hibah penelitian (Kemendikbudristek/BRIN), mahasiswa KKN tematik/PKM, serta tim survei lapangan independen."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Apakah format logbook yang dihasilkan sesuai dengan standar perguruan tinggi dan lembaga penelitian?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Ya. Format ekspor mengadopsi standar baku pelaporan penelitian di Indonesia: dokumen Microsoft Word (.docx) berorientasi Landscape A4 dengan margin 4-3-3-3 cm, kop institusi resmi, tabel kronologis 8 kolom (nomor, tanggal, durasi, lokasi, aktivitas & responden, deskripsi, capaian output, dan foto GPS), serta lembar pengesahan supervisor di bagian akhir."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Apakah file dokumen Word (.docx) hasil download bisa diedit kembali di laptop?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Sangat bisa. File yang diunduh adalah berkas Microsoft Word (.docx) asli berorientasi landscape. Anda bebas membuka dan mengeditnya menggunakan Microsoft Word, Office 365, LibreOffice, maupun Google Docs untuk menyesuaikan kata pengantar atau catatan tambahan sesuai kebutuhan pelaporan riset."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Bagaimana sistem mengabadikan bukti foto lapangan berkoordinat GPS dan waktu otomatis?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Saat Anda mengambil atau melampirkan foto kegiatan melalui aplikasi di HP, sistem secara otomatis membaca koordinat presisi (latitude dan longitude) serta waktu pengambilan riil dari perangkat. Metadata tersebut dicatat ke logbook dan dicetak rapi pada kolom dokumentasi foto dokumen Word."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Berapa kapasitas penyimpanan rekaman suara dan video wawancara, dan apakah aman?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Kapasitas penyimpanan brankas cloud riset mencapai hingga 5TB. Seluruh berkas audio (.mp3, .m4a, .wav) dan video (.mp4, .mov) wawancara narasumber disimpan terenkripsi di Google Cloud Storage dan Firestore yang terikat langsung ke akun pengguna, sehingga data tidak akan hilang saat memori HP penuh."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Apakah dokumen Word menyertakan lembar pengesahan resmi untuk dosen pembimbing atau supervisor?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Ya. Di bagian bawah dokumen hasil ekspor, sistem otomatis menyusun lembar pengesahan resmi lengkap dengan nama, gelar akademik, dan NIP/identitas supervisor riset utama serta penanggung jawab penelitian, siap untuk ditandatangani."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Apakah LogbookRiset mendukung multi-wilayah dan berbagai zona waktu di Indonesia?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Ya. Sistem mendukung pengelolaan wilayah riset multi-tingkat hingga 5 level administratif (Provinsi, Kabupaten/Kota, Kecamatan, Desa/Kelurahan, hingga Dusun/RW) serta mendukung penuh 3 zona waktu Indonesia: WIB (Waktu Indonesia Barat), WITA (Waktu Indonesia Tengah), dan WIT (Waktu Indonesia Timur)."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Bagaimana cara mulai menggunakan dan berapa biaya akses risetnya?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Anda dapat langsung mendaftar atau masuk menggunakan akun Google di halaman Login. Paket akses riset penuh tersedia seharga Rp 55.500 untuk masa aktif 90 hari (3 bulan penuh), mencakup pencatatan aktivitas tanpa batas, ekspor dokumen Word (.docx) tanpa batas, dan penyimpanan cloud terenkripsi."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
   
   <!-- Font Google Plus Jakarta Sans -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -32,7 +286,7 @@
   </script>
   
   <!-- Stylesheet -->
-  <link rel="stylesheet" href="css/style.css?v=20261010_58">
+  <link rel="stylesheet" href="css/style.css?v=20261011_85">
 </head>
 <body>
   <!-- Gerbang Pemuatan Awal Sistem (Mencegah Auth Flash & Glitch Rute) -->
@@ -44,18 +298,11 @@
   <!-- HEADER / APP BAR -->
   <header class="app-header">
     <div class="header-container">
-      <div class="brand">
-        <div class="brand-icon">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
-            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
-          </svg>
-        </div>
-        <div>
-          <h1 class="brand-title">LogbookRiset.id</h1>
-          <p class="brand-subtitle" id="headerSubtitle">Pencatatan Aktivitas Penelitian Lapangan</p>
-        </div>
-      </div>
+            <a href="/" class="brand" id="brandHeaderLink" aria-label="Beranda LogbookRiset.web.id">
+        <img src="/assets/img/logo-horizontal.png" alt="LogbookRiset.web.id" class="brand-logo-img" />
+      </a>
+      
+      
       
       <!-- Navigasi Pengunjung (Belum Login) -->
       <div id="guestHeaderActions" class="header-actions">
@@ -99,9 +346,775 @@
     </div>
   </header>
 
+  <!-- Landing Page Resmi Beranda (Rute: /) -->
+  <!-- Landing Page Resmi Beranda V2 (Visual-First, Manusiawi & Interaktif) -->
+<!-- Landing Page Resmi Beranda V3 (Landscape Word, Mockup HP 3-Kartu, 5 Topik Utama, Clean Minimalist Footer) -->
+<section id="viewLandingPage" class="app-route-view landing-v3-wrapper hidden">
+
   <!-- ======================================================== -->
-  <!-- 1. HALAMAN LOGIN KHUSUS (DEDICATED AUTH SCREEN - GUEST)  -->
+  <!-- HERO SECTION: KEMUDAHAN CATAT DI HP + MOCKUP SMARTPHONE  -->
   <!-- ======================================================== -->
+  <section class="v3-hero-section">
+    <div class="v3-container">
+      <div class="v3-hero-grid">
+        
+        <!-- Sisi Kiri: Headline & Call To Action -->
+        <div class="v3-hero-text">
+          <div class="v3-badge-pill">
+            <span class="v3-pulse-dot"></span>
+            <span>Sistem Dokumentasi Riset Lapangan Modern</span>
+          </div>
+
+          <h1 class="v3-hero-title">
+            Catat Logbook Penelitian Langsung di HP. <span class="v3-title-accent">Download Instan Format Word (.docx).</span>
+          </h1>
+
+          <p class="v3-hero-desc">
+            Nggak perlu lagi nulis tangan di buku catatan lalu begadang ngetik ulang di laptop. Buka HP saat di lapangan, ambil foto dengan koordinat GPS otomatis, rekam suara wawancara, dan logbook penelitian kamu langsung tersimpan aman.
+          </p>
+
+          <div class="v3-hero-cta-row">
+            <a href="/login" class="btn v3-btn-cta-primary" id="btnLandingHeroStart">
+              <span>Akses Aplikasi Sekarang!</span>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+            </a>
+          </div>
+
+          <!-- 3 Jaminan Cepat -->
+          <div class="v3-hero-badges-row">
+            <div class="v3-mini-badge">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+              <span>Download Logbook (.docx) Siap Pakai</span>
+            </div>
+            <div class="v3-mini-badge">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+              <span>Penyimpanan Media Cloud Up To 5TB</span>
+            </div>
+            <div class="v3-mini-badge">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+              <span>Bukti Foto, Video, dan Rekaman Aktivitas Penelitian Teratur Berdasarkan Logbook</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sisi Kanan: MOCKUP SMARTPHONE HP (3 KARTU LOGBOOK RIIL) -->
+        <div class="v3-hero-phone-col">
+          <div class="v3-phone-wrapper">
+            <div class="v3-phone-chassis">
+              
+              <!-- Hardware Notch / Island -->
+              <div class="v3-phone-notch">
+                <div class="v3-phone-cam"></div>
+              </div>
+
+              <!-- Layar Smartphone Aktif -->
+              <div class="v3-phone-viewport">
+                
+                <!-- Status Bar -->
+                <div class="v3-phone-top-bar">
+                  <span class="v3-status-time">09:41 WITA</span>
+                  <div class="v3-status-icons">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3c-4.97 0-9 4.03-9 9 0 2.12.74 4.07 1.97 5.61L12 22l7.03-4.39C20.26 16.07 21 14.12 21 12c0-4.97-4.03-9-9-9z"/></svg>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8l3 3 3-3c-1.65-1.66-4.34-1.66-6 0zm-4-4l2 2c2.76-2.76 7.24-2.76 10 0l2-2C15.14 9.14 8.87 9.14 5 13z"/></svg>
+                    <span class="v3-status-bat"></span>
+                  </div>
+                </div>
+
+                <!-- Mini Header App di Ponsel -->
+                <div class="v3-phone-app-bar">
+                  <div class="v3-mini-logo">
+                    <span class="v3-logo-sq"></span>
+                    <strong>LogbookRiset</strong>
+                  </div>
+                  <span class="v3-user-pill">Ruang Kerja Riset</span>
+                </div>
+
+                <!-- Tab Segmented Control -->
+                <div class="v3-phone-tab-bar">
+                  <div class="v3-ptab active">Logbook (24)</div>
+                  <div class="v3-ptab">Media Vault (16)</div>
+                </div>
+
+                <!-- Feed Kartu Logbook (Animasi Auto-Scrolling Looping Berkelanjutan) -->
+                <div class="v3-phone-scroll-area" id="phoneScrollArea">
+                  <div class="v3-phone-feed-track" id="phoneFeedTrack">
+                    <!-- GRUP 1: 3 KARTU LOGBOOK AKTIF -->
+                    <div class="v3-feed-group">
+                      <!-- KARTU 1: Wawancara Responden + Foto GPS + Audio Tersemat -->
+                      <div class="v3-feed-card">
+                        <div class="v3-fcard-header">
+                          <span class="v3-cat-badge wawancara">Wawancara Petani Responden</span>
+                          <span class="v3-sync-indicator">Tersinkron Cloud</span>
+                        </div>
+                        <div class="v3-fcard-time">Hari ini &bull; 09.30 - 11.45 WITA</div>
+                        <div class="v3-fcard-loc">
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                          <span>Kab. Wilayah Timur &bull; Kec. Sektor Satu &bull; Stasiun Riset 01</span>
+                        </div>
+                        <div class="v3-fcard-target">
+                          <strong>Responden:</strong> Bpk. R. Santoso (Ketua Kelompok Komoditas)
+                        </div>
+                        <p class="v3-fcard-desc">
+                          Wawancara mendalam mengenai efektivitas jadwal pemangkasan kakao dan kendala harga jual di tingkat pedagang pengumpul desa.
+                        </p>
+                        <div class="v3-fcard-media-row">
+                          <div class="v3-mini-photo-thumb">
+                            <span class="v3-gps-overlay-micro">GPS: -4.1284, 120.0381</span>
+                          </div>
+                          <div class="v3-mini-audio-pill">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                            <span>Audio Wawancara (24:18)</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- KARTU 2: Observasi Lapangan + Foto Stempel GPS -->
+                      <div class="v3-feed-card">
+                        <div class="v3-fcard-header">
+                          <span class="v3-cat-badge observasi">Observasi Unit Fermentasi</span>
+                          <span class="v3-sync-indicator">Tersinkron Cloud</span>
+                        </div>
+                        <div class="v3-fcard-time">Kemarin &bull; 14.00 - 16.30 WITA</div>
+                        <div class="v3-fcard-loc">
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                          <span>Kab. Wilayah Barat &bull; Kec. Sektor Dua &bull; Stasiun Lapangan 02</span>
+                        </div>
+                        <p class="v3-fcard-desc">
+                          Pengamatan langsung proses fermentasi biji kakao menggunakan kotak kayu bertingkat selama 5 hari dan pengukuran kadar air awal.
+                        </p>
+                        <div class="v3-mini-photo-thumb alt">
+                          <span class="v3-gps-overlay-micro">GPS: -3.2195, 120.2841</span>
+                        </div>
+                      </div>
+
+                      <!-- KARTU 3: Diskusi Kelompok (FGD) + Video Tersemat -->
+                      <div class="v3-feed-card">
+                        <div class="v3-fcard-header">
+                          <span class="v3-cat-badge fgd">Diskusi Kelompok (FGD)</span>
+                          <span class="v3-sync-indicator">Tersinkron Cloud</span>
+                        </div>
+                        <div class="v3-fcard-time">12 Okt 2026 &bull; 10.00 - 12.30 WITA</div>
+                        <div class="v3-fcard-loc">
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                          <span>Balai Penyuluhan Pertanian (BPP)</span>
+                        </div>
+                        <p class="v3-fcard-desc">
+                          Focus Group Discussion bersama 8 penyuluh pertanian mengenai dinamika rantai pasok dan sertifikasi biji kakao berkelanjutan.
+                        </p>
+                        <div class="v3-mini-video-pill">
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                          <span>Rekaman Video Sesi FGD (45:10)</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- GRUP 2: DUPLIKAT UNTUK SEAMLESS CONTINUOUS LOOP -->
+                    <div class="v3-feed-group" aria-hidden="true">
+                      <!-- KARTU 1 (Klon): Wawancara Responden + Foto GPS + Audio Tersemat -->
+                      <div class="v3-feed-card">
+                        <div class="v3-fcard-header">
+                          <span class="v3-cat-badge wawancara">Wawancara Petani Responden</span>
+                          <span class="v3-sync-indicator">Tersinkron Cloud</span>
+                        </div>
+                        <div class="v3-fcard-time">Hari ini &bull; 09.30 - 11.45 WITA</div>
+                        <div class="v3-fcard-loc">
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                          <span>Kab. Wilayah Timur &bull; Kec. Sektor Satu &bull; Stasiun Riset 01</span>
+                        </div>
+                        <div class="v3-fcard-target">
+                          <strong>Responden:</strong> Bpk. R. Santoso (Ketua Kelompok Komoditas)
+                        </div>
+                        <p class="v3-fcard-desc">
+                          Wawancara mendalam mengenai efektivitas jadwal pemangkasan kakao dan kendala harga jual di tingkat pedagang pengumpul desa.
+                        </p>
+                        <div class="v3-fcard-media-row">
+                          <div class="v3-mini-photo-thumb">
+                            <span class="v3-gps-overlay-micro">GPS: -4.1284, 120.0381</span>
+                          </div>
+                          <div class="v3-mini-audio-pill">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                            <span>Audio Wawancara (24:18)</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- KARTU 2 (Klon): Observasi Lapangan + Foto Stempel GPS -->
+                      <div class="v3-feed-card">
+                        <div class="v3-fcard-header">
+                          <span class="v3-cat-badge observasi">Observasi Unit Fermentasi</span>
+                          <span class="v3-sync-indicator">Tersinkron Cloud</span>
+                        </div>
+                        <div class="v3-fcard-time">Kemarin &bull; 14.00 - 16.30 WITA</div>
+                        <div class="v3-fcard-loc">
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                          <span>Kab. Wilayah Barat &bull; Kec. Sektor Dua &bull; Stasiun Lapangan 02</span>
+                        </div>
+                        <p class="v3-fcard-desc">
+                          Pengamatan langsung proses fermentasi biji kakao menggunakan kotak kayu bertingkat selama 5 hari dan pengukuran kadar air awal.
+                        </p>
+                        <div class="v3-mini-photo-thumb alt">
+                          <span class="v3-gps-overlay-micro">GPS: -3.2195, 120.2841</span>
+                        </div>
+                      </div>
+
+                      <!-- KARTU 3 (Klon): Diskusi Kelompok (FGD) + Video Tersemat -->
+                      <div class="v3-feed-card">
+                        <div class="v3-fcard-header">
+                          <span class="v3-cat-badge fgd">Diskusi Kelompok (FGD)</span>
+                          <span class="v3-sync-indicator">Tersinkron Cloud</span>
+                        </div>
+                        <div class="v3-fcard-time">12 Okt 2026 &bull; 10.00 - 12.30 WITA</div>
+                        <div class="v3-fcard-loc">
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                          <span>Balai Penyuluhan Pertanian (BPP)</span>
+                        </div>
+                        <p class="v3-fcard-desc">
+                          Focus Group Discussion bersama 8 penyuluh pertanian mengenai dinamika rantai pasok dan sertifikasi biji kakao berkelanjutan.
+                        </p>
+                        <div class="v3-mini-video-pill">
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                          <span>Rekaman Video Sesi FGD (45:10)</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Floating Button Tambah Logbook -->
+                <div class="v3-phone-fab-btn">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                  <span>Catat Aktivitas Baru</span>
+                </div>
+
+              </div>
+            </div>
+
+            <!-- Floating Badge Interaktif -->
+            <div class="v3-float-status-card">
+              <div class="v3-float-icon-glow">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+              </div>
+              <div>
+                <strong>Tersimpan Otomatis</strong>
+                <span>Data aman di cloud, nggak takut catatan hilang</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================================================== -->
+  <!-- SEKSI 1: SHOWCASE DOKUMEN WORD (.DOCX) - FORMAT LANDSCAPE -->
+  <!-- ======================================================== -->
+  <section class="v3-section v3-word-section" id="preview-word">
+    <div class="v3-container">
+      
+      <div class="v3-sec-header">
+        <span class="v3-sec-tag">Hasil Unduhan Instan</span>
+        <h2 class="v3-sec-title">Sekali Klik, Jadi Dokumen Word (.docx) Format Landscape Siap Pelaporan Riset</h2>
+      </div>
+
+      <!-- Desktop Laptop Frame Lebar (Landscape Preview Window) -->
+      <div class="v3-desktop-frame">
+        
+        <!-- Window Titlebar -->
+        <div class="v3-dtop-titlebar">
+          <div class="v3-dtop-dots">
+            <span class="v3-dtop-dot red"></span>
+            <span class="v3-dtop-dot yellow"></span>
+            <span class="v3-dtop-dot green"></span>
+          </div>
+          <div class="v3-dtop-docname">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            <span>Logbook_Kegiatan_Penelitian_Lapangan.docx &mdash; Microsoft Word (Tata Letak Landscape)</span>
+          </div>
+          <span class="v3-dtop-badge">Orientasi: Landscape A4</span>
+        </div>
+
+        <!-- Ribbon Toolbar Word Sederhana -->
+        <div class="v3-dtop-ribbon">
+          <span class="v3-ribbon-item active">Beranda</span>
+          <span class="v3-ribbon-item">Tata Letak (Landscape)</span>
+          <span class="v3-ribbon-item">Tabel</span>
+          <span class="v3-ribbon-item">Tinjau</span>
+          <span class="v3-ribbon-meta">Margin: 4 - 3 - 3 - 3 cm &bull; 100% Kompatibel MS Word &amp; Google Docs</span>
+        </div>
+
+        <!-- Kanvas Lembar Dokumen Landscape A4 Asli -->
+        <div class="v3-dtop-canvas-area">
+          <div class="v3-word-mobile-scroll-badge">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="7 13 12 18 17 13"/><polyline points="7 6 12 11 17 6"/></svg>
+            <span>Geser ke samping untuk melihat seluruh format 8 kolom Word Landscape &rarr;</span>
+          </div>
+          <div class="v3-docx-landscape-sheet">
+            
+            <!-- Kop Institusi / Lembaga Riset -->
+            <div class="v3-sheet-kop">
+              <div class="v3-kop-content">
+                <h3>LEMBAGA RISET &amp; PENGEMBANGAN ILMIAH NASIONAL</h3>
+                <h4>DIREKTORAT PENELITIAN &amp; PENGABDIAN MASYARAKAT</h4>
+                <p>PUSAT STUDI RISET LAPANGAN &amp; PENGEMBANGAN TERPADU</p>
+                <small>Kompleks Sains &amp; Riset Terpadu No. 1, Gedung Inovasi Riset</small>
+              </div>
+              <div class="v3-kop-border-double"></div>
+            </div>
+
+            <!-- Judul Dokumen & Subtitle Riset -->
+            <div class="v3-sheet-title-box">
+              <h2>LOGBOOK CATATAN KEGIATAN PENELITIAN LAPANGAN</h2>
+              <p>Periode Penelitian: 1 Oktober 2026 &ndash; 30 November 2026</p>
+            </div>
+
+            <!-- Identitas Riset Formal (Netral & Profesional) -->
+            <div class="v3-sheet-meta-grid">
+              <div><strong>Nama Peneliti:</strong> Tim Peneliti Lapangan</div>
+              <div><strong>Nomor Registrasi Riset:</strong> REG-2026-0891</div>
+              <div><strong>Supervisor Riset Utama:</strong> Prof. Dr. Supervisor Riset Utama, M.Sc.</div>
+              <div><strong>Penanggung Jawab Riset:</strong> Dr. Penanggung Jawab Riset, M.T.</div>
+              <div class="v3-meta-span-2"><strong>Topik Riset:</strong> Analisis Efisiensi Rantai Pasok dan Keberlanjutan Komoditas Perkebunan Lapangan</div>
+            </div>
+
+            <!-- Tabel Logbook Landscape 8 Kolom (Sesuai docxExport.js Asli) -->
+            <div class="v3-sheet-table-overflow">
+              <table class="v3-docx-official-table">
+                <thead>
+                  <tr>
+                    <th style="width: 4%;">No</th>
+                    <th style="width: 13%;">Hari / Tanggal</th>
+                    <th style="width: 11%;">Waktu &amp; Durasi</th>
+                    <th style="width: 14%;">Lokasi (Kec / Desa)</th>
+                    <th style="width: 18%;">Aktivitas &amp; Responden</th>
+                    <th style="width: 22%;">Uraian / Deskripsi Kegiatan</th>
+                    <th style="width: 8%;">Output Capaian</th>
+                    <th style="width: 10%;">Dokumentasi (GPS Cam)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="text-center font-bold">1</td>
+                    <td>Selasa, 14 Okt 2026</td>
+                    <td>09.30 - 11.45 WITA<br><small>(2 Jam 15 Mnt)</small></td>
+                    <td>Kec. Wilayah Timur &bull;<br>Desa Sektor Satu</td>
+                    <td>
+                      <strong>Wawancara Responden:</strong><br>
+                      Bpk. R. Santoso (Ketua Kelompok Komoditas)
+                    </td>
+                    <td>
+                      Wawancara mendalam mengenai efektivitas jadwal pemangkasan komoditas, pemupukan terpadu, dan kestabilan rantai distribusi hasil panen.
+                    </td>
+                    <td class="text-center font-bold text-emerald">1 Kuesioner Terisi Penuh</td>
+                    <td>
+                      <div class="v3-table-photo-cell">
+                        <div class="v3-photo-box-thumb">
+                          <span class="v3-gps-tag-micro">GPS: -4.1284, 120.0381</span>
+                        </div>
+                        <span class="v3-photo-label-micro">Foto Lapangan #01</span>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="text-center font-bold">2</td>
+                    <td>Rabu, 15 Okt 2026</td>
+                    <td>14.00 - 16.30 WITA<br><small>(2 Jam 30 Mnt)</small></td>
+                    <td>Kec. Wilayah Barat &bull;<br>Desa Sektor Dua</td>
+                    <td>
+                      <strong>Observasi Unit Fermentasi:</strong><br>
+                      Pengamatan Kotak Fermentasi Terstandar
+                    </td>
+                    <td>
+                      Pengamatan langsung proses fermentasi bertingkat selama masa pemantauan dan pengukuran parameter kadar air awal komoditas.
+                    </td>
+                    <td class="text-center font-bold text-emerald">Data Parameter Suhu &amp; Kadar Air</td>
+                    <td>
+                      <div class="v3-table-photo-cell">
+                        <div class="v3-photo-box-thumb alt">
+                          <span class="v3-gps-tag-micro">GPS: -3.2195, 120.2841</span>
+                        </div>
+                        <span class="v3-photo-label-micro">Foto Lapangan #02</span>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Lembar Pengesahan Supervisor Riset Asli di Bawah Tabel -->
+            <div class="v3-sheet-validation-row">
+              <div class="v3-sign-box">
+                <p>Menyetujui,<br><strong>Supervisor Riset Utama</strong></p>
+                <div class="v3-sign-placeholder-line"></div>
+                <p><strong>Prof. Dr. Supervisor Riset Utama, M.Sc.</strong><br>NIP. 19700101 199503 1 001</p>
+              </div>
+              <div class="v3-sign-box">
+                <p>Lokasi Riset, 30 November 2026<br><strong>Penanggung Jawab Riset</strong></p>
+                <div class="v3-sign-placeholder-line"></div>
+                <p><strong>Dr. Penanggung Jawab Riset, M.T.</strong><br>NIP. 19750510 200112 2 002</p>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ======================================================== -->
+  <!-- SEKSI 2: BRANKAS MEDIA WAWANCARA (5TB CLOUD & ANTI-TERTUKAR)-->
+  <!-- ======================================================== -->
+  <section class="v3-section v3-media-section">
+    <div class="v3-container">
+      
+      <div class="v3-media-layout">
+        
+        <!-- Sisi Kiri: Narasi Manusiawi & Storage Bar 5TB -->
+        <div class="v3-media-left">
+          <span class="v3-sec-tag alt">Brankas Media Wawancara</span>
+          <h2 class="v3-sec-title light">Simpan Rekaman Wawancara Hingga 5TB. Terhubung ke Logbook, Nggak Akan Tertukar.</h2>
+          <p class="v3-media-lead">
+            Pernah pusing mencari rekaman suara atau video wawancara yang tenggelam di antara ribuan foto di galeri HP? 
+          </p>
+          <p class="v3-media-sub">
+            Di LogbookRiset, setiap rekaman wawancara otomatis terikat dengan ID logbook kegiatan yang bersangkutan. Kamu bisa langsung memutar, mengunduh, dan melacak bukti wawancara kapan saja tanpa takut data tertukar atau hilang saat memori HP penuh.
+          </p>
+
+          <!-- Storage Meter Card -->
+          <div class="v3-storage-box">
+            <div class="v3-storage-top">
+              <div class="v3-storage-label">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                <span>Penyimpanan Cloud Riset</span>
+              </div>
+              <span class="v3-storage-badge">Kapasitas Lega Up To 5TB</span>
+            </div>
+            <div class="v3-storage-bar-track">
+              <div class="v3-storage-bar-fill"></div>
+            </div>
+            <div class="v3-storage-bottom-info">
+              <span>Mendukung ratusan jam audio &amp; video resolusi tinggi</span>
+              <strong>Server Cloud Terenkripsi</strong>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sisi Kanan: Live Media Player Cards -->
+        <div class="v3-media-right">
+          
+          <!-- Card 1: Video Wawancara -->
+          <div class="v3-media-card">
+            <div class="v3-mcard-top">
+              <span class="v3-pill-type video">Video Wawancara</span>
+              <span class="v3-pill-linked">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                <span>Terhubung ke Logbook #LB-042</span>
+              </span>
+            </div>
+
+            <div class="v3-video-preview">
+              <div class="v3-vplay-btn">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+              </div>
+              <span class="v3-vduration">18:42</span>
+              <span class="v3-vfilename">Wawancara_Mendalam_Narasumber_Kunci.mp4</span>
+            </div>
+
+            <div class="v3-mcard-bottom">
+              <div>
+                <strong>Lokasi:</strong> Wilayah Riset Sektor Satu
+                <div class="v3-mfile-size">142.8 MB &bull; Google Cloud Storage</div>
+              </div>
+              <button type="button" class="btn v3-btn-track">
+                <span>Lacak Sesi Logbook &rarr;</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Card 2: Audio Wawancara dengan Waveform -->
+          <div class="v3-media-card">
+            <div class="v3-mcard-top">
+              <span class="v3-pill-type audio">Rekaman Suara</span>
+              <span class="v3-pill-linked">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                <span>Terhubung ke Logbook #LB-041</span>
+              </span>
+            </div>
+
+            <div class="v3-audio-preview">
+              <div class="v3-aplay-btn">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+              </div>
+              <div class="v3-waveform-visual">
+                <span style="height: 35%;"></span>
+                <span style="height: 60%;"></span>
+                <span style="height: 90%;"></span>
+                <span style="height: 50%;"></span>
+                <span style="height: 75%;"></span>
+                <span style="height: 100%;"></span>
+                <span style="height: 80%;"></span>
+                <span style="height: 65%;"></span>
+                <span style="height: 85%;"></span>
+                <span style="height: 45%;"></span>
+                <span style="height: 70%;"></span>
+                <span style="height: 95%;"></span>
+                <span style="height: 40%;"></span>
+              </div>
+              <span class="v3-atime">24:18</span>
+            </div>
+
+            <div class="v3-mcard-bottom">
+              <div>
+                <strong>Responden:</strong> Bpk. R. Santoso (Ketua Kelompok Komoditas)
+                <div class="v3-mfile-size">22.4 MB &bull; Audio M4A Stereo</div>
+              </div>
+              <button type="button" class="btn v3-btn-track">
+                <span>Lacak Sesi Logbook &rarr;</span>
+              </button>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ======================================================== -->
+  <!-- SEKSI 3: 5 FITUR UTAMA PENUNJANG RISET (5 POIN UTAMA)    -->
+  <!-- ======================================================== -->
+  <section class="v3-section v3-features-section" id="fitur">
+    <div class="v3-container">
+      
+      <div class="v3-sec-header">
+        <span class="v3-sec-tag">Kapabilitas Inti Platform</span>
+        <h2 class="v3-sec-title">5 Solusi Praktis untuk Kelancaran Riset Lapangan</h2>
+        <p class="v3-sec-desc">
+          Semua yang kamu butuhkan untuk mencatat, menyimpan bukti otentik, dan menyusun laporan riset tanpa repot.
+        </p>
+      </div>
+
+      <!-- 5 Poin Utama dalam Grid Modern -->
+      <div class="v3-five-grid">
+        
+        <!-- Poin 1 -->
+        <div class="v3-fitem-card">
+          <div class="v3-fnum-badge">01</div>
+          <div class="v3-ficon-box">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+          </div>
+          <h3 class="v3-fitem-title">Pencatatan Logbook Lebih Mudah Langsung di HP</h3>
+          <p class="v3-fitem-desc">
+            Buka langsung dari browser ponselmu saat berada di lokasi kebun, sawah, posko, maupun balai desa tanpa instalasi aplikasi yang membebani memori HP.
+          </p>
+        </div>
+
+        <!-- Poin 2 -->
+        <div class="v3-fitem-card">
+          <div class="v3-fnum-badge">02</div>
+          <div class="v3-ficon-box">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 18 15 15"/></svg>
+          </div>
+          <h3 class="v3-fitem-title">Logbook Langsung di-Download dalam Bentuk Word (.docx)</h3>
+          <p class="v3-fitem-desc">
+            Otomatis terformat rapi dalam tabel landscape bergaris formal, lampiran foto dokumentasi lapangan (kompatibel foto GPS Cam / kamera HP), dan lembar pengesahan tanda tangan supervisor riset siap cetak.
+          </p>
+        </div>
+
+        <!-- Poin 3 -->
+        <div class="v3-fitem-card">
+          <div class="v3-fnum-badge">03</div>
+          <div class="v3-ficon-box">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+          </div>
+          <h3 class="v3-fitem-title">Penyimpanan Media Wawancara Video &amp; Suara Up To 5TB</h3>
+          <p class="v3-fitem-desc">
+            Kapasitas cloud lega hingga 5TB untuk menampung ratusan jam rekaman suara dan video wawancara resolusi tinggi yang terenkripsi aman di cloud server.
+          </p>
+        </div>
+
+        <!-- Poin 4 -->
+        <div class="v3-fitem-card">
+          <div class="v3-fnum-badge">04</div>
+          <div class="v3-ficon-box">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+          </div>
+          <h3 class="v3-fitem-title">Media &amp; Bukti Wawancara Mudah Dilacak Tanpa Tertukar</h3>
+          <p class="v3-fitem-desc">
+            Setiap file audio dan video wawancara terikat otomatis ke ID kegiatan logbook yang bersangkutan, sehingga kamu bisa melacak konteks wawancara dalam 1-klik.
+          </p>
+        </div>
+
+        <!-- Poin 5 -->
+        <div class="v3-fitem-card v3-fitem-span">
+          <div class="v3-fnum-badge">05</div>
+          <div class="v3-ficon-box">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          </div>
+          <h3 class="v3-fitem-title">Mudah Dilakukan &amp; Digunakan Kapan Pun dan di Mana Pun</h3>
+          <p class="v3-fitem-desc">
+            Didesain ringan dan responsif langsung dari browser ponsel, tablet, maupun laptop. Mendukung pengelolaan multi-wilayah hingga 5 tingkat administratif serta 3 zona waktu riset (WIB, WITA, WIT).
+          </p>
+        </div>
+
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ======================================================== -->
+  <!-- SEKSI 4: PUSAT TANYA JAWAB (FAQ RESMI & LENGKAP)          -->
+  <!-- ======================================================== -->
+  <section class="v3-section v3-faq-section" id="faq">
+    <div class="v3-container">
+      
+      <div class="v3-sec-header">
+        <span class="v3-sec-tag">Pusat Tanya Jawab</span>
+        <h2 class="v3-sec-title">Pertanyaan yang Sering Diajukan Seputar Riset</h2>
+        <p class="v3-sec-desc">Jawaban transparan dan faktual seputar standar dokumen, penyimpanan cloud, dan pengesahan.</p>
+      </div>
+
+      <div class="v3-faq-accordion-box">
+        
+        <!-- FAQ 1 -->
+        <details class="v3-faq-item" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+          <summary class="v3-faq-q">
+            <span itemprop="name">Apa itu LogbookRiset.web.id dan untuk siapa platform ini dirancang?</span>
+            <svg class="v3-faq-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+          </summary>
+          <div class="v3-faq-a" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
+            <p itemprop="text">
+              LogbookRiset.web.id adalah platform resmi untuk pencatatan logbook penelitian lapangan dan riset akademik di Indonesia. Dirancang khusus untuk mahasiswa tingkat akhir (skripsi, tesis, disertasi), dosen pelaksana hibah penelitian (Kemendikbudristek/BRIN), mahasiswa KKN tematik/PKM, serta tim survei lapangan independen.
+            </p>
+          </div>
+        </details>
+
+        <!-- FAQ 2 -->
+        <details class="v3-faq-item" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+          <summary class="v3-faq-q">
+            <span itemprop="name">Apakah format logbook yang dihasilkan sesuai dengan standar perguruan tinggi dan lembaga penelitian?</span>
+            <svg class="v3-faq-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+          </summary>
+          <div class="v3-faq-a" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
+            <p itemprop="text">
+              Ya. Format ekspor mengadopsi standar baku pelaporan penelitian di Indonesia: dokumen Microsoft Word (.docx) berorientasi Landscape A4 dengan margin 4-3-3-3 cm, kop institusi resmi, tabel kronologis 8 kolom (nomor, tanggal, durasi, lokasi, aktivitas &amp; responden, deskripsi, capaian output, dan foto GPS), serta lembar pengesahan supervisor di bagian akhir.
+            </p>
+          </div>
+        </details>
+
+        <!-- FAQ 3 -->
+        <details class="v3-faq-item" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+          <summary class="v3-faq-q">
+            <span itemprop="name">Apakah file dokumen Word (.docx) hasil download bisa diedit kembali di laptop?</span>
+            <svg class="v3-faq-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+          </summary>
+          <div class="v3-faq-a" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
+            <p itemprop="text">
+              Sangat bisa. File yang diunduh adalah berkas Microsoft Word (.docx) asli berorientasi landscape. Anda bebas membuka dan mengeditnya menggunakan Microsoft Word, Office 365, LibreOffice, maupun Google Docs untuk menyesuaikan kata pengantar atau catatan tambahan sesuai kebutuhan pelaporan riset.
+            </p>
+          </div>
+        </details>
+
+        <!-- FAQ 4 -->
+        <details class="v3-faq-item" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+          <summary class="v3-faq-q">
+            <span itemprop="name">Bagaimana sistem mengabadikan bukti foto lapangan berkoordinat GPS dan waktu otomatis?</span>
+            <svg class="v3-faq-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+          </summary>
+          <div class="v3-faq-a" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
+            <p itemprop="text">
+              Saat Anda mengambil atau melampirkan foto kegiatan melalui aplikasi di HP, sistem secara otomatis membaca koordinat presisi (latitude dan longitude) serta waktu pengambilan riil dari perangkat. Metadata tersebut dicatat ke logbook dan dicetak rapi pada kolom dokumentasi foto dokumen Word.
+            </p>
+          </div>
+        </details>
+
+        <!-- FAQ 5 -->
+        <details class="v3-faq-item" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+          <summary class="v3-faq-q">
+            <span itemprop="name">Berapa kapasitas penyimpanan rekaman suara dan video wawancara, dan apakah aman?</span>
+            <svg class="v3-faq-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+          </summary>
+          <div class="v3-faq-a" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
+            <p itemprop="text">
+              Kapasitas penyimpanan brankas cloud riset mencapai hingga 5TB. Seluruh berkas audio (.mp3, .m4a, .wav) dan video (.mp4, .mov) wawancara narasumber disimpan terenkripsi di Google Cloud Storage dan Firestore yang terikat langsung ke akun pengguna, sehingga data tidak akan hilang saat memori HP penuh.
+            </p>
+          </div>
+        </details>
+
+        <!-- FAQ 6 -->
+        <details class="v3-faq-item" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+          <summary class="v3-faq-q">
+            <span itemprop="name">Apakah dokumen Word menyertakan lembar pengesahan resmi untuk dosen pembimbing atau supervisor?</span>
+            <svg class="v3-faq-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+          </summary>
+          <div class="v3-faq-a" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
+            <p itemprop="text">
+              Ya. Di bagian bawah dokumen hasil ekspor, sistem otomatis menyusun lembar pengesahan resmi lengkap dengan nama, gelar akademik, dan NIP/identitas supervisor riset utama serta penanggung jawab penelitian, siap untuk ditandatangani.
+            </p>
+          </div>
+        </details>
+
+        <!-- FAQ 7 -->
+        <details class="v3-faq-item" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+          <summary class="v3-faq-q">
+            <span itemprop="name">Apakah LogbookRiset mendukung multi-wilayah dan berbagai zona waktu di Indonesia?</span>
+            <svg class="v3-faq-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+          </summary>
+          <div class="v3-faq-a" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
+            <p itemprop="text">
+              Ya. Sistem mendukung pengelolaan wilayah riset multi-tingkat hingga 5 level administratif (Provinsi, Kabupaten/Kota, Kecamatan, Desa/Kelurahan, hingga Dusun/RW) serta mendukung penuh 3 zona waktu Indonesia: WIB (Waktu Indonesia Barat), WITA (Waktu Indonesia Tengah), dan WIT (Waktu Indonesia Timur).
+            </p>
+          </div>
+        </details>
+
+        <!-- FAQ 8 -->
+        <details class="v3-faq-item" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">
+          <summary class="v3-faq-q">
+            <span itemprop="name">Bagaimana cara mulai menggunakan dan berapa biaya akses risetnya?</span>
+            <svg class="v3-faq-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+          </summary>
+          <div class="v3-faq-a" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">
+            <p itemprop="text">
+              Anda dapat langsung mendaftar atau masuk menggunakan akun Google di halaman Login. Paket akses riset penuh tersedia seharga Rp 55.500 untuk masa aktif 90 hari (3 bulan penuh), mencakup pencatatan aktivitas tanpa batas, ekspor dokumen Word (.docx) tanpa batas, dan penyimpanan cloud terenkripsi.
+            </p>
+          </div>
+        </details>
+
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ======================================================== -->
+  <!-- FOOTER MINIMALIS & BERSIH (CLEAN INDUSTRY STANDARD)       -->
+  <!-- ======================================================== -->
+  <footer class="v3-clean-footer">
+    <div class="v3-container v3-footer-flex">
+      
+      <div class="v3-footer-left">
+        <a href="/" class="v3-footer-brand" id="brandFooterLink" aria-label="Beranda LogbookRiset">
+          <img src="/assets/img/logo-horizontal.png" alt="LogbookRiset.web.id" class="v3-footer-logo" />
+        </a>
+        <p class="v3-footer-copy">
+          &copy; 2026 LogbookRiset.web.id &bull; Sistem Pencatatan Riset Lapangan Terstandar.
+        </p>
+      </div>
+
+      <nav class="v3-footer-nav" aria-label="Navigasi Halaman Riset">
+        <a href="#preview-word" class="v3-fnav-link">Format Word Landscape</a>
+        <a href="#fitur" class="v3-fnav-link">Fitur Riset</a>
+        <a href="#faq" class="v3-fnav-link">Tanya Jawab (FAQ)</a>
+        <a href="/pricing" class="v3-fnav-link">Paket Akses</a>
+      </nav>
+
+    </div>
+  </footer>
+
+</section>
+
   <section id="viewLoginScreen" class="login-view-wrapper hidden">
     <div class="login-card-container">
       <!-- Sisi Kiri: Informasi Sistem -->
@@ -166,7 +1179,7 @@
         <!-- Form Email & Password -->
         <form id="formEmailAuth">
           <div class="form-group hidden" id="groupRegisterName">
-            <label for="authNameInput" class="form-label required">Nama Lengkap Mahasiswa</label>
+            <label for="authNameInput" class="form-label required">Nama Lengkap Peneliti</label>
             <input type="text" id="authNameInput" class="form-control" placeholder="Nama lengkap Anda">
           </div>
 
@@ -222,7 +1235,7 @@
 
       <div class="verify-email-display-box">
         <span class="verify-email-label">Tautan verifikasi telah dikirimkan ke:</span>
-        <span class="verify-email-value" id="verifyTargetEmailText">mahasiswa@domain.ac.id</span>
+        <span class="verify-email-value" id="verifyTargetEmailText">peneliti@domain.com</span>
       </div>
 
       <div class="verify-instruction-box">
@@ -408,7 +1421,7 @@
         <!-- State Kosong (Empty State) -->
         <div id="emptyState" class="empty-state hidden">
           <h3>Belum Ada Catatan Logbook</h3>
-          <p>Mulai catat aktivitas penelitian lapangan skripsi Anda sekarang.</p>
+          <p>Mulai catat aktivitas penelitian dan riset lapangan Anda sekarang.</p>
           <button id="btnEmptyAdd" class="btn btn-primary btn-sm">Tambah Catatan</button>
         </div>
       </section>
@@ -560,10 +1573,7 @@
       </div>
     </section>
   </main>
-
-  <!-- ======================================================== -->
   <!-- 4. HALAMAN PENAWARAN PAKET LANGGANAN (ROUTE: /pricing)   -->
-  <!-- ======================================================== -->
   <section id="viewPricing" class="app-route-view pricing-view-wrapper hidden">
     <div class="pricing-container">
       <!-- Breadcrumb / Back Navigation -->
@@ -580,7 +1590,7 @@
       <!-- Hero Header -->
       <div class="pricing-header">
         <span class="pricing-kicker">Aktivasi Akses Riset Lapangan</span>
-        <h2 class="pricing-title">Paket Lengkap Penelitian Mahasiswa</h2>
+        <h2 class="pricing-title">Paket Lengkap Akses Peneliti</h2>
         <p class="pricing-subtitle">
           Satu paket terpadu untuk pencatatan aktivitas lapangan terstruktur, dokumentasi foto berkoordinat GPS, dan ekspor dokumen Word siap sidang pengesahan.
         </p>
@@ -630,7 +1640,7 @@
               <h4 class="benefit-title">Dokumentasi Foto Lapangan</h4>
             </div>
             <p class="benefit-desc">
-              Penyematan foto stempel koordinat lintang dan bujur langsung ke dalam entri logbook dengan kompresi hemat kuota internet.
+              Penyematan foto dokumentasi berkoordinat lintang dan bujur (seperti hasil GPS Map Camera) langsung ke dalam entri logbook dengan kompresi hemat kuota internet.
             </p>
           </div>
 
@@ -639,7 +1649,7 @@
               <h4 class="benefit-title">Ekspor Dokumen Word (.docx)</h4>
             </div>
             <p class="benefit-desc">
-              Unduh rekapitulasi tabel lanskap lengkap dengan kop institusi kampus, foto bukti kegiatan, dan lembar pengesahan Dosen Pembimbing.
+              Unduh rekapitulasi tabel lanskap lengkap dengan kop institusi riset, foto bukti kegiatan, dan lembar pengesahan Supervisor Riset.
             </p>
           </div>
 
@@ -655,10 +1665,7 @@
       </div>
     </div>
   </section>
-
-  <!-- ======================================================== -->
   <!-- 5. PORTAL CHECKOUT TERDEDIKASI (ROUTE: /checkout)         -->
-  <!-- ======================================================== -->
   <section id="viewCheckout" class="app-route-view checkout-view-wrapper hidden">
     <div class="checkout-container">
       <!-- Breadcrumb / Back Navigation -->
@@ -924,16 +1931,16 @@
                 <!-- Sandbox Notice Box -->
                 <div id="qrisSandboxNotice" class="sandbox-notice-box hidden">
                   <div class="sandbox-badge-row">
-                    <span class="badge-sandbox-tag">Mode Sandbox Pakasir (Uji Coba)</span>
+                    <span class="badge-sandbox-tag">Mode Uji Coba (Sandbox)</span>
                   </div>
                   <p class="sandbox-text">
-                    Proyek Pakasir saat ini berstatus <strong>Sandbox</strong>. Kode QR berikut adalah kode simulasi dari server Pakasir. Untuk menerima pembayaran uang riil dari m-banking atau e-wallet, silakan nonaktifkan Mode Sandbox (Go Live) di <a href="https://app.pakasir.com" target="_blank" rel="noopener">dashboard Pakasir</a>.
+                    Sistem saat ini berstatus <strong>Sandbox</strong>. Kode QR berikut adalah kode uji coba simulasi. Anda dapat menguji proses pembayaran menggunakan tombol simulasi di bawah.
                   </p>
                 </div>
 
                 <div class="qris-image-container" id="qrisImageContainer">
                   <div class="spinner" id="qrisSpinner"></div>
-                  <img id="qrisImageElement" src="" alt="Scan QRIS Pakasir" class="hidden" />
+                  <img id="qrisImageElement" src="" alt="Scan Kode QRIS" class="hidden" />
                 </div>
 
                 <!-- Rincian Biaya & Total Tagihan -->
@@ -968,10 +1975,10 @@
                 <!-- Sandbox Notice Box untuk VA -->
                 <div id="vaSandboxNotice" class="sandbox-notice-box hidden">
                   <div class="sandbox-badge-row">
-                    <span class="badge-sandbox-tag">Mode Sandbox Pakasir (Uji Coba)</span>
+                    <span class="badge-sandbox-tag">Mode Uji Coba (Sandbox)</span>
                   </div>
                   <p class="sandbox-text">
-                    Proyek Pakasir saat ini berstatus <strong>Sandbox</strong>. Nomor Virtual Account di bawah adalah nomor simulasi dari server Pakasir. Anda dapat menguji proses pembayaran dengan tombol uji simulasi di bawah.
+                    Sistem saat ini berstatus <strong>Sandbox</strong>. Nomor Virtual Account di bawah adalah nomor uji coba simulasi. Anda dapat menguji proses pembayaran menggunakan tombol simulasi di bawah.
                   </p>
                 </div>
 
@@ -1026,22 +2033,19 @@
               </button>
             </div>
 
-            <!-- Tombol Bantuan Simulasi Testing Langsung ke Server Pakasir (Reaktif Sandbox) -->
+            <!-- Tombol Bantuan Simulasi Testing Langsung (Reaktif Sandbox) -->
             <div id="qrisSimulateArea" class="qris-simulate-container hidden">
               <button type="button" class="btn-simulation-link" id="btnSimulateSuccessPayment">
-                Uji Simulasi Pembayaran (Server Pakasir API)
+                Uji Simulasi Pembayaran Berhasil
               </button>
-              <p class="simulate-hint">Mengirim sinyal verifikasi sukses ke API resmi app.pakasir.com/api/paymentsimulation.</p>
+              <p class="simulate-hint">Mengirim sinyal verifikasi untuk menguji alur aktivasi langganan secara otomatis.</p>
             </div>
           </div>
         </div>
       </div>
     </div>
   </section>
-
-  <!-- ======================================================== -->
   <!-- 6. HALAMAN SUKSES PEMBAYARAN (ROUTE: /payment-success)   -->
-  <!-- ======================================================== -->
   <section id="viewPaymentSuccess" class="app-route-view success-view-wrapper hidden">
     <div class="success-container">
       <div class="success-receipt-card" id="printableReceiptArea">
@@ -1065,7 +2069,7 @@
           <div class="receipt-header-row">
             <div>
               <span class="receipt-box-kicker">Tanda Terima Pembayaran Digital</span>
-              <span class="receipt-service-title">LogbookRiset.id SaaS Subscription</span>
+              <span class="receipt-service-title">LogbookRiset.web.id Subscription</span>
             </div>
             <span class="receipt-order-code" id="receiptOrderIdText">Order #LB-...</span>
           </div>
@@ -1086,7 +2090,7 @@
               <span class="receipt-val" id="receiptTimestampText">-</span>
             </div>
             <div class="receipt-row">
-              <span class="receipt-label">Akun Mahasiswa</span>
+              <span class="receipt-label">Akun Peneliti</span>
               <span class="receipt-val" id="receiptUserEmailText">-</span>
             </div>
             <div class="receipt-row">
@@ -1117,7 +2121,7 @@
             </div>
             <div class="activated-item">
               <span class="activated-dot">&bull;</span>
-              <span>Dokumentasi Foto Lapangan dengan stempel koordinat GPS</span>
+              <span>Dokumentasi Foto Lapangan (kompatibel foto GPS Cam / kamera HP)</span>
             </div>
             <div class="activated-item">
               <span class="activated-dot">&bull;</span>
@@ -1159,16 +2163,13 @@
 
   <!-- Dummy fallback container untuk modalPaywall (backward compatibility) -->
   <div id="modalPaywall" class="hidden"></div>
-
-  <!-- ======================================================== -->
   <!-- 4. MODAL: PROFIL RISET LENGKAP & HIRARKI WILAYAH WIZARD  -->
-  <!-- ======================================================== -->
   <div id="modalProfile" class="modal-overlay hidden">
     <div class="modal-sheet modal-sheet-large">
       <div class="modal-header">
         <div>
           <h2 class="modal-title">Profil Penelitian dan Wilayah Riset</h2>
-          <p class="modal-subtitle">Acuan otomatis kop dokumen Word, lembar pengesahan pembimbing, dan pilihan wilayah</p>
+          <p class="modal-subtitle">Acuan otomatis kop dokumen Word, lembar pengesahan supervisor, dan pilihan wilayah</p>
         </div>
         <button class="btn-close-modal" id="btnCloseProfileModal">&times;</button>
       </div>
@@ -1176,17 +2177,17 @@
       <form id="formResearcherProfile" class="modal-body">
         <!-- Bagian 1: Identitas Mahasiswa Peneliti -->
         <div class="profile-section-card">
-          <h3 class="profile-section-title">Identitas Mahasiswa (Peneliti)</h3>
+          <h3 class="profile-section-title">Identitas Peneliti</h3>
           <p class="profile-section-desc">Identitas akademik peneliti untuk kop dokumen rekapitulasi kegiatan dan arsip resmi.</p>
           
           <div class="form-row">
             <div class="form-group flex-1">
-              <label for="profName" class="form-label required">Nama Lengkap Mahasiswa</label>
+              <label for="profName" class="form-label required">Nama Lengkap Peneliti</label>
               <input type="text" id="profName" class="form-control" placeholder="Nama lengkap Anda" required>
             </div>
             <div class="form-group flex-1">
-              <label for="profNim" class="form-label required">NIM / Nomor Induk Mahasiswa</label>
-              <input type="text" id="profNim" class="form-control" placeholder="Nomor Induk Mahasiswa (NIM)" required>
+              <label for="profNim" class="form-label required">ID Peneliti / Nomor Registrasi</label>
+              <input type="text" id="profNim" class="form-control" placeholder="Nomor Registrasi / ID Peneliti" required>
             </div>
           </div>
 
@@ -1202,23 +2203,23 @@
           </div>
         </div>
 
-        <!-- Bagian 2: Informasi Skripsi & Dosen Pembimbing -->
+        <!-- Bagian 2: Informasi Proyek Riset & Supervisor -->
         <div class="profile-section-card">
-          <h3 class="profile-section-title">Informasi Skripsi & Dosen Pembimbing</h3>
-          <p class="profile-section-desc">Judul penelitian skripsi dan data dosen pembimbing untuk lembar pengesahan resmi dokumen Word.</p>
+          <h3 class="profile-section-title">Informasi Proyek Riset & Supervisor</h3>
+          <p class="profile-section-desc">Judul proyek penelitian dan data supervisor untuk lembar pengesahan resmi dokumen Word.</p>
           
           <div class="form-group">
-            <label for="profTopic" class="form-label required">Judul Skripsi / Topik Penelitian</label>
-            <textarea id="profTopic" rows="2" class="form-control" placeholder="Judul skripsi atau topik penelitian lapangan Anda..." required></textarea>
+            <label for="profTopic" class="form-label required">Judul Proyek / Topik Penelitian</label>
+            <textarea id="profTopic" rows="2" class="form-control" placeholder="Judul atau topik kegiatan penelitian lapangan Anda..." required></textarea>
           </div>
 
           <div class="form-row">
             <div class="form-group flex-2">
-              <label for="profSupervisor" class="form-label required">Nama Dosen Pembimbing (Beserta Gelar)</label>
-              <input type="text" id="profSupervisor" class="form-control" placeholder="Contoh: Dr. Ir. Nama Pembimbing, M.Si." required>
+              <label for="profSupervisor" class="form-label required">Nama Supervisor / Penanggung Jawab Riset</label>
+              <input type="text" id="profSupervisor" class="form-control" placeholder="Contoh: Prof. Dr. Nama Supervisor, M.Sc." required>
             </div>
             <div class="form-group flex-1">
-              <label for="profSupervisorNip" class="form-label">NIP / NIDN Pembimbing</label>
+              <label for="profSupervisorNip" class="form-label">NIP / ID Supervisor</label>
               <input type="text" id="profSupervisorNip" class="form-control" placeholder="Contoh: 19850101 201012 1 001">
               <small class="form-hint">Opsional, dicantumkan pada kolom tanda tangan.</small>
             </div>
@@ -1274,10 +2275,7 @@
       </form>
     </div>
   </div>
-
-  <!-- ======================================================== -->
   <!-- 5. MODAL: FORM CATAT / EDIT LOGBOOK BARU                  -->
-  <!-- ======================================================== -->
   <div id="modalForm" class="modal-overlay hidden">
     <div class="modal-sheet modal-sheet-large">
       <div class="modal-header">
@@ -1507,10 +2505,7 @@
       </form>
     </div>
   </div>
-
-  <!-- ======================================================== -->
   <!-- 6. MODAL: KELOLA KATEGORI KEGIATAN TERDAFTAR              -->
-  <!-- ======================================================== -->
   <div id="modalCategoryManager" class="modal-overlay hidden">
     <div class="modal-sheet">
       <div class="modal-header">
@@ -1535,10 +2530,7 @@
       </div>
     </div>
   </div>
-
-  <!-- ======================================================== -->
   <!-- 7. MODAL: EKSPOR DOKUMEN WORD (.DOCX)                    -->
-  <!-- ======================================================== -->
   <div id="modalExport" class="modal-overlay hidden">
     <div class="modal-sheet">
       <div class="modal-header">
@@ -1599,10 +2591,7 @@
       </div>
     </div>
   </div>
-
-  <!-- ======================================================== -->
   <!-- 8. MODAL: LIGHTBOX FOTO DETAIL (FULL SCREEN)             -->
-  <!-- ======================================================== -->
   <div id="modalLightbox" class="lightbox-overlay hidden">
     <div class="lightbox-content">
       <button class="lightbox-close" id="btnCloseLightbox">&times;</button>
@@ -1610,10 +2599,7 @@
       <div class="lightbox-caption" id="lightboxCaption">Dokumentasi Lapangan</div>
     </div>
   </div>
-
-  <!-- ======================================================== -->
   <!-- 9. MODAL: RESET KATA SANDI (FORGOT PASSWORD)             -->
-  <!-- ======================================================== -->
   <div id="modalResetPassword" class="modal-overlay hidden">
     <div class="modal-sheet" style="max-width: 440px;">
       <div class="modal-header">
@@ -1639,10 +2625,7 @@
       </form>
     </div>
   </div>
-
-  <!-- ======================================================== -->
   <!-- 10. MODAL: FORM KELOLA WILAYAH PENELITIAN (5 TINGKAT)     -->
-  <!-- ======================================================== -->
   <div id="modalAddLocation" class="modal-overlay hidden" style="z-index: 1060;">
     <div class="modal-sheet" style="max-width: 540px;">
       <div class="modal-header">
@@ -1670,7 +2653,7 @@
         <!-- Tingkat 2: Kabupaten / Kota -->
         <div class="form-group" id="groupLocKabupaten">
           <label for="locInputKabupaten" class="form-label">2. Kabupaten / Kota</label>
-          <input type="text" id="locInputKabupaten" class="form-control" placeholder="Contoh: Kab. Luwu atau Kota Bandung">
+          <input type="text" id="locInputKabupaten" class="form-control" placeholder="Contoh: Kab. Bogor atau Kota Bandung">
           <small class="form-hint">Ketik manual nama Kabupaten atau Kota penelitian Anda.</small>
         </div>
 
@@ -1702,10 +2685,7 @@
       </form>
     </div>
   </div>
-
-  <!-- ======================================================== -->
   <!-- 11. MODAL: DIALOG KONFIRMASI HAPUS WILAYAH (IN-APP)       -->
-  <!-- ======================================================== -->
   <div id="modalConfirmDeleteLocation" class="modal-overlay hidden" style="z-index: 1070;">
     <div class="modal-sheet" style="max-width: 440px;">
       <div class="modal-header">
@@ -1726,10 +2706,7 @@
       </div>
     </div>
   </div>
-
-  <!-- ======================================================== -->
   <!-- 12. FLOATING BACKGROUND UPLOAD MANAGER WIDGET            -->
-  <!-- ======================================================== -->
   <aside id="bgUploadWidget" class="bg-upload-widget hidden" aria-live="polite">
     <div class="bg-upload-card" id="bgUploadCard">
       <div class="bg-upload-header">
@@ -1788,6 +2765,10 @@
   <script src="js/auth.js?v=20261010_56"></script>
   <script src="js/config.js?v=20261010_56"></script>
   <script src="js/docxExport.js?v=20261010_56"></script>
-  <script src="js/app.js?v=20261010_62"></script>
+  <!-- GSAP 3 & ScrollTrigger Engine (Lokal Vendor Berkecepatan Tinggi) -->
+  <script src="vendor/gsap.min.js"></script>
+  <script src="vendor/ScrollTrigger.min.js"></script>
+  <script src="js/landingAnimations.js?v=20261011_85"></script>
+  <script src="js/app.js?v=20261011_85"></script>
 </body>
 </html>

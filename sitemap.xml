@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+  <url>
+    <loc>https://logbookriset.web.id/</loc>
+    <lastmod>2026-10-11</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+    <image:image>
+      <image:loc>https://logbookriset.web.id/assets/img/og-preview.png</image:loc>
+      <image:title>Logbook Penelitian dan Riset Lapangan Otomatis ke Dokumen Word (.docx)</image:title>
+      <image:caption>Platform resmi pencatatan logbook penelitian lapangan dengan stempel koordinat GPS dan ekspor Word Landscape A4.</image:caption>
+    </image:image>
+    <image:image>
+      <image:loc>https://logbookriset.web.id/assets/img/logo-horizontal.png</image:loc>
+      <image:title>Logo Resmi LogbookRiset.web.id</image:title>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://logbookriset.web.id/pricing</loc>
+    <lastmod>2026-10-11</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.85</priority>
+  </url>
+  <url>
+    <loc>https://logbookriset.web.id/login</loc>
+    <lastmod>2026-10-11</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.70</priority>
+  </url>
+</urlset>

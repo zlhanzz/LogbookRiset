@@ -82,7 +82,7 @@ const AuthManager = {
       desa: "Desa Contoh 1",
       jenisKegiatan: "Wawancara Informan Kunci",
       sasaranResponden: "[Contoh] Tokoh Masyarakat / Informan Kunci (Data Simulasi)",
-      deskripsi: "[DATA CONTOH SIMULASI] Wawancara mendalam simulasi untuk pengujian format rekapitulasi lapangan, pencatatan durasi kegiatan, dan kesiapan berkas pendukung skripsi.",
+      deskripsi: "[DATA CONTOH SIMULASI] Wawancara mendalam simulasi untuk pengujian format rekapitulasi lapangan, pencatatan durasi kegiatan, dan kesiapan berkas laporan kegiatan riset.",
       output: "[Output Contoh] Transkrip poin-poin hasil wawancara informan kunci (simulasi)",
       fotoUrl: "/assets/dummy_gps_cam_01.jpg",
       isDummy: true
@@ -267,7 +267,7 @@ const AuthManager = {
         // Inisialisasi dokumen pengguna dengan schema standar lengkap
         const initialDoc = {
           uid: uid,
-          name: this.currentUser?.displayName || (this.currentUser?.email ? this.currentUser.email.split("@")[0] : "Mahasiswa"),
+          name: this.currentUser?.displayName || (this.currentUser?.email ? this.currentUser.email.split("@")[0] : "Peneliti"),
           email: this.currentUser?.email || "",
           nim: "",
           university: "",

@@ -36,6 +36,7 @@
     dashboardFeedArea: document.getElementById("dashboardFeedArea"),
 
     // Layar Rute & Navigasi
+    viewLandingPage: document.getElementById("viewLandingPage"),
     viewLoginScreen: document.getElementById("viewLoginScreen"),
     viewVerifyEmail: document.getElementById("viewVerifyEmail"),
     viewMainApp: document.getElementById("viewMainApp"),
@@ -396,6 +397,7 @@
   // ROUTER SISTEM PROFESIONAL (HTML5 HISTORY API - STANDAR INDUSTRI)
   // ==========================================================================
   const ROUTES = {
+    HOME: "/",
     LOGIN: "/login",
     VERIFY_EMAIL: "/verify-email",
     DASHBOARD: "/dashboard",
@@ -407,9 +409,9 @@
   };
 
   function normalizeRoute(path) {
-    if (!path || path === "/" || path === "") return ROUTES.DASHBOARD;
+    if (!path || path === "/" || path === "") return ROUTES.HOME;
     const clean = path.split("?")[0].split("#")[0];
-    return clean || ROUTES.DASHBOARD;
+    return clean || ROUTES.HOME;
   }
 
   function navigateTo(targetPath, replace = false) {
@@ -418,11 +420,12 @@
 
     // Proteksi Rute (Auth Gating Standar Industri)
     if (!user) {
-      if (cleanPath !== ROUTES.LOGIN) {
+      const isPublicRoute = cleanPath === ROUTES.HOME || cleanPath === ROUTES.PRICING || cleanPath === ROUTES.LOGIN;
+      if (!isPublicRoute) {
         cleanPath = ROUTES.LOGIN;
       }
     } else if (!user.isDemo && !user.emailVerified) {
-      if (cleanPath !== ROUTES.VERIFY_EMAIL) {
+      if (cleanPath !== ROUTES.VERIFY_EMAIL && cleanPath !== ROUTES.HOME) {
         cleanPath = ROUTES.VERIFY_EMAIL;
       }
     } else {
@@ -444,13 +447,20 @@
   }
 
   function renderRoute(path) {
+    hideToast();
     const cleanPath = normalizeRoute(path);
+
+    // Hentikan dan bersihkan siklus hidup animasi landing page jika rute berubah
+    if (window.LandingAnimations) {
+      LandingAnimations.destroy();
+    }
 
     // Sembunyikan splash screen awal jika masih aktif
     const splash = document.getElementById("appInitialSplash");
     if (splash) splash.classList.add("hidden");
 
     // Sembunyikan semua tampilan utama
+    if (DOM.viewLandingPage) DOM.viewLandingPage.classList.add("hidden");
     if (DOM.viewLoginScreen) DOM.viewLoginScreen.classList.add("hidden");
     if (DOM.viewVerifyEmail) DOM.viewVerifyEmail.classList.add("hidden");
     if (DOM.viewMainApp) DOM.viewMainApp.classList.add("hidden");
@@ -467,9 +477,23 @@
       if (DOM.userHeaderActions) DOM.userHeaderActions.classList.remove("hidden");
     }
 
+    // Sinkronisasi status tombol CTA Landing Page
+    updateLandingPageAuthUI(user);
+
     switch (cleanPath) {
+      case ROUTES.HOME:
+        if (DOM.viewLandingPage) DOM.viewLandingPage.classList.remove("hidden");
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        if (window.LandingAnimations) {
+          requestAnimationFrame(() => {
+            LandingAnimations.init();
+          });
+        }
+        break;
+
       case ROUTES.LOGIN:
         if (DOM.viewLoginScreen) DOM.viewLoginScreen.classList.remove("hidden");
+        window.scrollTo({ top: 0, behavior: "smooth" });
         break;
 
       case ROUTES.VERIFY_EMAIL:
@@ -519,7 +543,43 @@
     }
   }
 
+  function updateLandingPageAuthUI(user) {
+    const btnHeroStart = document.getElementById("btnLandingHeroStart");
+    const btnPricingAction = document.getElementById("btnLandingPricingAction");
+    const linkFooterLogin = document.getElementById("linkFooterLogin");
+    const linkFooterRegister = document.getElementById("linkFooterRegister");
+
+    if (user) {
+      if (btnHeroStart) {
+        btnHeroStart.setAttribute("href", "/dashboard");
+        btnHeroStart.innerHTML = `
+          <span>Buka Ruang Kerja (Dashboard)</span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        `;
+      }
+      if (btnPricingAction) {
+        btnPricingAction.innerHTML = `<span>Buka Ruang Kerja (Dashboard)</span>`;
+      }
+      if (linkFooterLogin) linkFooterLogin.textContent = "Buka Dashboard";
+      if (linkFooterRegister) linkFooterRegister.textContent = "Buka Dashboard";
+    } else {
+      if (btnHeroStart) {
+        btnHeroStart.setAttribute("href", "/login");
+        btnHeroStart.innerHTML = `
+          <span>Akses Aplikasi Sekarang!</span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+        `;
+      }
+      if (btnPricingAction) {
+        btnPricingAction.innerHTML = `<span>Mulai Berlangganan Sekarang</span>`;
+      }
+      if (linkFooterLogin) linkFooterLogin.textContent = "Masuk Akun Peneliti";
+      if (linkFooterRegister) linkFooterRegister.textContent = "Daftar Akun Baru";
+    }
+  }
+
   function renderPaymentSuccessReceipt() {
+    hideToast();
     const user = window.AuthManager ? AuthManager.currentUser : null;
     let order = state.lastCompletedOrder || state.currentPaymentOrder;
     const isSubscribed = window.AuthManager && AuthManager.isSubscribed();
@@ -537,7 +597,7 @@
 
     const orderId = (order && order.orderId) || (user && user.subscriptionOrderId) || `LB-${Date.now().toString().slice(-8)}`;
     const methodKey = (order && order.method) || "qris";
-    const methodName = VA_BANK_NAMES[methodKey] || (methodKey === "qris" ? "QRIS (Semua Bank & Dompet Digital)" : methodKey === "payment_link" ? "Portal Resmi Pakasir (pay-v2)" : methodKey);
+    const methodName = VA_BANK_NAMES[methodKey] || (methodKey === "qris" ? "QRIS (Semua Bank & Dompet Digital)" : methodKey === "payment_link" ? "Portal Pembayaran Resmi" : methodKey);
     const completedDate = (order && order.completedAt) ? new Date(order.completedAt) : new Date();
 
     const validUntil = new Date(completedDate);
@@ -598,7 +658,12 @@
         CategoryManager.resetCategories();
       }
       renderHeaderUserProfile(null);
-      navigateTo(ROUTES.LOGIN, true);
+      const target = targetRoute || normalizeRoute(window.location.pathname);
+      if (target === ROUTES.HOME || target === ROUTES.PRICING) {
+        navigateTo(target, true);
+      } else {
+        navigateTo(ROUTES.LOGIN, true);
+      }
       return;
     }
 
@@ -1161,8 +1226,26 @@
 
       xhr.upload.onprogress = (e) => {
         if (e.lengthComputable && typeof onProgress === "function") {
-          const percent = Math.min(100, Math.round((e.loaded / e.total) * 100));
-          onProgress({ loaded: e.loaded, total: e.total, percent });
+          const rawPercent = Math.min(100, Math.round((e.loaded / e.total) * 100));
+          onProgress({
+            phase: e.loaded >= e.total ? "cloud_sync" : "transfer",
+            loaded: e.loaded,
+            total: e.total,
+            rawPercent
+          });
+        }
+      };
+
+      xhr.upload.onload = () => {
+        // Seluruh biner telah terkirim dari browser ke server buffer
+        // Server saat ini sedang streaming dan mengenkripsi ke Google Drive 5 TB
+        if (typeof onProgress === "function") {
+          onProgress({
+            phase: "cloud_sync",
+            loaded: file.size,
+            total: file.size,
+            rawPercent: 100
+          });
         }
       };
 
@@ -1171,6 +1254,15 @@
           try {
             const res = JSON.parse(xhr.responseText);
             if (res.success) {
+              if (typeof onProgress === "function") {
+                onProgress({
+                  phase: "server_done",
+                  loaded: file.size,
+                  total: file.size,
+                  rawPercent: 100,
+                  data: res.data
+                });
+              }
               resolve(res.data);
             } else {
               reject(new Error(res.message || "Gagal mengunggah media ke penyimpanan cloud"));
@@ -1199,10 +1291,11 @@
     return uploadMediaWithProgress(file, userId, logbookId);
   }
 
-  // Pengelola Antrean Unggah Latar Belakang (Non-Blocking Floating Manager)
+  // Pengelola Antrean Unggah Latar Belakang (Non-Blocking Multi-Stage Floating Manager)
   const BackgroundMediaManager = {
     activeTask: null,
     queue: [],
+    cloudTicker: null,
 
     enqueue(task) {
       this.queue.push(task);
@@ -1222,6 +1315,13 @@
       this.processNext();
     },
 
+    clearCloudTicker() {
+      if (this.cloudTicker) {
+        clearInterval(this.cloudTicker);
+        this.cloudTicker = null;
+      }
+    },
+
     async executeTask(task) {
       const { userId, logbookId, targetTitle, audioFile, videoFile } = task;
 
@@ -1232,83 +1332,119 @@
       if (DOM.bgUploadErrorArea) DOM.bgUploadErrorArea.classList.add("hidden");
       if (DOM.btnCloseUploadWidget) DOM.btnCloseUploadWidget.classList.add("hidden");
 
+      this.clearCloudTicker();
+
+      const itemsToUpload = [];
+      if (audioFile) itemsToUpload.push({ type: "audio", file: audioFile, label: "Audio" });
+      if (videoFile) itemsToUpload.push({ type: "video", file: videoFile, label: "Video" });
+
+      if (itemsToUpload.length === 0) {
+        this.activeTask = null;
+        return;
+      }
+
+      const totalFiles = itemsToUpload.length;
       const uploadedResults = [];
 
       try {
-        // 1. Unggah Audio jika ada
-        if (audioFile) {
+        for (let i = 0; i < itemsToUpload.length; i++) {
+          const item = itemsToUpload[i];
+          const fileIndex = i + 1;
+          const prefixLabel = totalFiles > 1 ? `[${fileIndex}/${totalFiles}] ` : "";
+
+          // Tentukan bobot alokasi persentase berkas ini dalam alur kerja
+          // Jika 1 berkas: transfer (0 - 72%), cloud_sync (72 - 92%), DB & finalize (92 - 100%)
+          // Jika 2 berkas: file 1 (0 - 45%), file 2 (45 - 90%), DB & finalize (90 - 100%)
+          const fileStartPct = totalFiles === 1 ? 0 : (i === 0 ? 0 : 45);
+          const fileTransferMaxPct = totalFiles === 1 ? 72 : (i === 0 ? 32 : 75);
+          const fileCloudMaxPct = totalFiles === 1 ? 92 : (i === 0 ? 44 : 89);
+          const fileRangeSpan = fileTransferMaxPct - fileStartPct;
+
           this.updateWidgetState({
-            fileName: audioFile.name,
-            status: "Mengunggah Audio...",
-            percent: 0,
-            bytesText: `0 MB / ${formatBytes(audioFile.size)}`,
+            fileName: item.file.name,
+            status: `${prefixLabel}Mengirim ${item.label}...`,
+            percent: fileStartPct,
+            bytesText: `0 MB / ${formatBytes(item.file.size)}`,
             isCompleted: false,
-            isFailed: false
+            isFailed: false,
+            phase: "transfer"
           });
 
-          const audioRes = await uploadMediaWithProgress(audioFile, userId, logbookId, (p) => {
-            this.updateWidgetState({
-              fileName: audioFile.name,
-              status: `Mengunggah Audio (${p.percent}%)`,
-              percent: p.percent,
-              bytesText: `${formatBytes(p.loaded)} / ${formatBytes(p.total)}`,
-              isCompleted: false,
-              isFailed: false
-            });
+          let currentFilePct = fileStartPct;
+
+          const uploadRes = await uploadMediaWithProgress(item.file, userId, logbookId, (p) => {
+            if (p.phase === "transfer") {
+              const transferRatio = p.total > 0 ? (p.loaded / p.total) : 0;
+              currentFilePct = Math.min(fileTransferMaxPct, Math.round(fileStartPct + (transferRatio * fileRangeSpan)));
+              this.updateWidgetState({
+                fileName: item.file.name,
+                status: `${prefixLabel}Mengirim ${item.label} (${currentFilePct}%)`,
+                percent: currentFilePct,
+                bytesText: `${formatBytes(p.loaded)} / ${formatBytes(p.total)}`,
+                isCompleted: false,
+                isFailed: false,
+                phase: "transfer"
+              });
+            } else if (p.phase === "cloud_sync") {
+              // Browser selesai mengirim byte. Server sekarang memproses streaming ke Google Drive 5 TB.
+              if (!this.cloudTicker) {
+                let tickerPct = Math.max(currentFilePct, fileTransferMaxPct);
+                this.updateWidgetState({
+                  fileName: item.file.name,
+                  status: `${prefixLabel}Sinkronisasi Cloud Drive...`,
+                  percent: tickerPct,
+                  bytesText: `${formatBytes(item.file.size)} • Mengamankan ke Drive 5 TB`,
+                  isCompleted: false,
+                  isFailed: false,
+                  phase: "syncing"
+                });
+
+                this.cloudTicker = setInterval(() => {
+                  if (tickerPct < fileCloudMaxPct) {
+                    tickerPct = Math.min(fileCloudMaxPct, tickerPct + 2);
+                    this.updateWidgetState({
+                      fileName: item.file.name,
+                      status: `${prefixLabel}Sinkronisasi Cloud Drive...`,
+                      percent: tickerPct,
+                      bytesText: `${formatBytes(item.file.size)} • Mengamankan ke Drive 5 TB`,
+                      isCompleted: false,
+                      isFailed: false,
+                      phase: "syncing"
+                    });
+                  }
+                }, 900);
+              }
+            }
           });
+
+          this.clearCloudTicker();
 
           uploadedResults.push({
-            file_id: audioRes.file_id,
-            file_name: audioRes.file_name,
-            drive_file_name: audioRes.drive_file_name,
-            file_type: "audio",
-            mime_type: audioRes.mime_type || audioFile.type || "audio/mpeg",
-            size: audioRes.size || audioFile.size,
-            web_view_link: audioRes.web_view_link || "",
-            stream_url: audioRes.stream_url || `/api/media/stream?file_id=${audioRes.file_id}`,
+            file_id: uploadRes.file_id,
+            file_name: uploadRes.file_name,
+            drive_file_name: uploadRes.drive_file_name,
+            file_type: item.type,
+            mime_type: uploadRes.mime_type || item.file.type || (item.type === "video" ? "video/mp4" : "audio/mpeg"),
+            size: uploadRes.size || item.file.size,
+            web_view_link: uploadRes.web_view_link || "",
+            stream_url: uploadRes.stream_url || `/api/media/stream?file_id=${uploadRes.file_id}`,
             logbook_id: logbookId,
             uploaded_at: new Date().toISOString()
           });
         }
 
-        // 2. Unggah Video jika ada
-        if (videoFile) {
-          this.updateWidgetState({
-            fileName: videoFile.name,
-            status: "Mengunggah Video...",
-            percent: 0,
-            bytesText: `0 MB / ${formatBytes(videoFile.size)}`,
-            isCompleted: false,
-            isFailed: false
-          });
-
-          const videoRes = await uploadMediaWithProgress(videoFile, userId, logbookId, (p) => {
-            this.updateWidgetState({
-              fileName: videoFile.name,
-              status: `Mengunggah Video (${p.percent}%)`,
-              percent: p.percent,
-              bytesText: `${formatBytes(p.loaded)} / ${formatBytes(p.total)}`,
-              isCompleted: false,
-              isFailed: false
-            });
-          });
-
-          uploadedResults.push({
-            file_id: videoRes.file_id,
-            file_name: videoRes.file_name,
-            drive_file_name: videoRes.drive_file_name,
-            file_type: "video",
-            mime_type: videoRes.mime_type || videoFile.type || "video/mp4",
-            size: videoRes.size || videoFile.size,
-            web_view_link: videoRes.web_view_link || "",
-            stream_url: videoRes.stream_url || `/api/media/stream?file_id=${videoRes.file_id}`,
-            logbook_id: logbookId,
-            uploaded_at: new Date().toISOString()
-          });
-        }
-
-        // 3. Patch atomik ke Firestore & state lokal
+        // 3. FASE REGISTRASI: Patch atomik ke Firestore & state lokal (92% - 98%)
         if (uploadedResults.length > 0) {
+          this.updateWidgetState({
+            fileName: uploadedResults.map(r => r.file_name).join(", "),
+            status: "Mendaftarkan ke Logbook...",
+            percent: 94,
+            bytesText: "Menyimpan Metadata & Sinkronisasi",
+            isCompleted: false,
+            isFailed: false,
+            phase: "db-sync"
+          });
+
           let updatedMedia = [];
           const entryIdx = state.entries.findIndex(e => e.id === logbookId);
           if (entryIdx !== -1) {
@@ -1333,6 +1469,16 @@
               .set({ wawancara_media: updatedMedia }, { merge: true });
           }
 
+          this.updateWidgetState({
+            fileName: uploadedResults.map(r => r.file_name).join(", "),
+            status: "Memperbarui Koleksi Media...",
+            percent: 98,
+            bytesText: "Memperbarui Tampilan Wawancara",
+            isCompleted: false,
+            isFailed: false,
+            phase: "db-sync"
+          });
+
           const user = window.AuthManager ? AuthManager.currentUser : null;
           saveEntriesToLocalStorage(state.entries, user);
           updateDashboard();
@@ -1341,16 +1487,18 @@
             renderMediaGallery();
           }
 
+          // 4. FASE FINAL: Selesai 100% & Terverifikasi Aktif
           this.updateWidgetState({
             fileName: uploadedResults.map(r => r.file_name).join(", "),
-            status: "Selesai (Cloud Terenkripsi)",
+            status: "Tersimpan di Cloud (100%)",
             percent: 100,
-            bytesText: "100% Tersimpan",
+            bytesText: "100% Siap Diakses",
             isCompleted: true,
-            isFailed: false
+            isFailed: false,
+            phase: "completed"
           });
 
-          showToast("Media wawancara berhasil dicadangkan ke cloud terenkripsi!", "success");
+          showToast("Media wawancara berhasil dicadangkan dan siap diakses di koleksi!", "success");
           if (DOM.btnCloseUploadWidget) DOM.btnCloseUploadWidget.classList.remove("hidden");
 
           setTimeout(() => {
@@ -1360,6 +1508,7 @@
           }, 8000);
         }
       } catch (err) {
+        this.clearCloudTicker();
         console.error("Gagal mengunggah media background:", err);
         this.updateWidgetState({
           fileName: (videoFile || audioFile)?.name || "Berkas Media",
@@ -1368,6 +1517,7 @@
           bytesText: "Terputus",
           isCompleted: false,
           isFailed: true,
+          phase: "failed",
           errorMsg: err.message || "Gagal mengunggah ke penyimpanan cloud"
         });
         showToast("Gagal mengunggah media: " + err.message, "error");
@@ -1375,15 +1525,25 @@
       }
     },
 
-    updateWidgetState({ fileName, status, percent, bytesText, isCompleted, isFailed, errorMsg }) {
+    updateWidgetState({ fileName, status, percent, bytesText, isCompleted, isFailed, phase, errorMsg }) {
       if (DOM.bgUploadFileName) DOM.bgUploadFileName.textContent = fileName || "-";
       if (DOM.bgUploadStatusBadge) {
         DOM.bgUploadStatusBadge.textContent = status || "Memproses...";
-        DOM.bgUploadStatusBadge.className = "bg-upload-status-badge" + (isCompleted ? " completed" : isFailed ? " failed" : "");
+        let badgeClass = "bg-upload-status-badge";
+        if (isCompleted) badgeClass += " completed";
+        else if (isFailed) badgeClass += " failed";
+        else if (phase === "syncing") badgeClass += " syncing";
+        else if (phase === "db-sync") badgeClass += " db-sync";
+        DOM.bgUploadStatusBadge.className = badgeClass;
       }
       if (DOM.bgUploadProgressBar) {
         DOM.bgUploadProgressBar.style.width = `${percent}%`;
-        DOM.bgUploadProgressBar.className = "bg-upload-progress-fill" + (isCompleted ? " completed" : isFailed ? " failed" : "");
+        let fillClass = "bg-upload-progress-fill";
+        if (isCompleted) fillClass += " completed";
+        else if (isFailed) fillClass += " failed";
+        else if (phase === "syncing") fillClass += " syncing";
+        else if (phase === "db-sync") fillClass += " db-sync";
+        DOM.bgUploadProgressBar.className = fillClass;
       }
       if (DOM.bgUploadPercent) DOM.bgUploadPercent.textContent = `${percent}%`;
       if (DOM.bgUploadBytes) DOM.bgUploadBytes.textContent = bytesText || "";
@@ -1928,7 +2088,7 @@
     }
 
     if (method === "payment_link") {
-      showToast("Menyiapkan laman pembayaran resmi Pakasir...", "info");
+      showToast("Menyiapkan laman pembayaran...", "info");
       try {
         const resp = await fetch("/api/payment/create", {
           method: "POST",
@@ -1998,7 +2158,7 @@
         }
 
         window.open(paymentUrl, "_blank");
-        showToast("Laman pembayaran resmi Pakasir telah dibuka di tab baru.", "info");
+        showToast("Laman pembayaran telah dibuka di tab baru.", "info");
 
         // Tampilkan view aktif dengan tombol cek status
         if (DOM.checkoutChannelSelection) DOM.checkoutChannelSelection.classList.add("hidden");
@@ -2006,7 +2166,7 @@
         if (DOM.checkoutQrisArea) DOM.checkoutQrisArea.classList.add("hidden");
         if (DOM.checkoutVaArea) DOM.checkoutVaArea.classList.remove("hidden");
 
-        if (DOM.vaBankNameTitle) DOM.vaBankNameTitle.textContent = "Portal Resmi Pakasir (pay-v2)";
+        if (DOM.vaBankNameTitle) DOM.vaBankNameTitle.textContent = "Portal Pembayaran Resmi";
         if (DOM.vaOrderIdText) DOM.vaOrderIdText.textContent = `Order #${orderId}`;
         if (DOM.vaNumberDisplay) DOM.vaNumberDisplay.textContent = "Buka di Browser";
         if (DOM.vaBaseAmount) DOM.vaBaseAmount.textContent = formatRupiah(50000);
@@ -2046,7 +2206,7 @@
       if (DOM.qrisImageElement) DOM.qrisImageElement.classList.add("hidden");
     }
 
-    showToast("Menghubungkan ke gateway Pakasir...", "info");
+    showToast("Menyiapkan transaksi pembayaran...", "info");
 
     try {
       const resp = await fetch("/api/payment/create", {
@@ -2068,7 +2228,7 @@
         throw new Error(`Server tidak mengembalikan respons yang valid (HTTP ${resp.status})`);
       }
       if (!resp.ok || !data.success) {
-        throw new Error((data && data.message) || `Gagal membuat tagihan ${method} ke Pakasir (HTTP ${resp.status}).`);
+        throw new Error((data && data.message) || `Gagal membuat tagihan pembayaran ${method} (HTTP ${resp.status}).`);
       }
 
       const orderId = data.order_id || (data.data && data.data.order_id) || data.orderId || `LB-${Date.now()}`;
@@ -2175,26 +2335,35 @@
         applySandboxMode(isSandbox);
       }
     } catch (err) {
-      console.error("Gagal membuat transaksi Pakasir:", err);
+      console.error("Gagal membuat transaksi pembayaran:", err);
       const isUnavailable = err.message && (
         err.message.toLowerCase().includes("not available") ||
         err.message.toLowerCase().includes("tidak tersedia")
       );
       const errMsg = isUnavailable
-        ? "Saluran pembayaran ini sedang dinonaktifkan di gateway Pakasir. Silakan pilih bank lain atau gunakan QRIS."
+        ? "Saluran pembayaran ini sedang tidak tersedia. Silakan pilih metode lain atau gunakan QRIS."
         : ("Gagal memuat transaksi: " + err.message);
       showToast(errMsg, "error");
       handleBackToChannels();
     }
   }
 
-  async function handleCheckPaymentStatus() {
+  async function handleCheckPaymentStatus(silent = false) {
     if (!state.currentPaymentOrder) {
-      showToast("Belum ada tagihan aktif. Silakan pilih saluran pembayaran.", "info");
+      if (!silent) showToast("Belum ada tagihan aktif. Silakan pilih saluran pembayaran.", "info");
       return;
     }
 
-    showToast("Memeriksa status transaksi ke gateway Pakasir...", "info");
+    if (!silent) {
+      showToast("Memeriksa status pembayaran...", "info");
+    }
+
+    const btnCheck = DOM.btnCheckPaymentStatus;
+    const originalCheckText = btnCheck ? btnCheck.innerHTML : "";
+    if (btnCheck && !silent) {
+      btnCheck.disabled = true;
+      btnCheck.innerHTML = `<span>Memeriksa status...</span>`;
+    }
 
     try {
       const targetId = state.currentPaymentOrder.txnId || state.currentPaymentOrder.orderId;
@@ -2218,8 +2387,8 @@
         applySandboxMode(data.is_sandbox);
       }
 
+      // Penanganan rate limit secara senyap (silent background handling) tanpa memunculkan popup mengganggu
       if (data.rate_limited) {
-        showToast("Gateway Pakasir membatasi cek status tiap 4 detik. Silakan coba kembali sesaat lagi.", "info");
         return;
       }
 
@@ -2252,15 +2421,26 @@
           }
         }
 
-        showToast("Pembayaran berhasil diverifikasi oleh Pakasir. Akses aktif selama 90 hari.", "success");
+        hideToast();
         updateSubscriptionBadgeUI();
         updateDashboard();
         navigateTo(ROUTES.PAYMENT_SUCCESS);
       } else {
-        showToast("Pembayaran belum terdeteksi (Status: " + (data.status || "pending") + "). Silakan selesaikan pembayaran di HP Anda.", "info");
+        if (!silent) {
+          showToast("Pembayaran belum terdeteksi. Silakan selesaikan pembayaran di aplikasi Anda.", "info");
+        }
       }
     } catch (e) {
-      showToast("Gagal cek status: " + e.message, "error");
+      if (!silent) {
+        showToast("Gagal cek status: " + e.message, "error");
+      }
+    } finally {
+      if (btnCheck && !silent) {
+        setTimeout(() => {
+          btnCheck.disabled = false;
+          btnCheck.innerHTML = originalCheckText;
+        }, 1500);
+      }
     }
   }
 
@@ -2270,7 +2450,12 @@
       return;
     }
 
-    showToast("Mengirim sinyal verifikasi simulasi ke server Pakasir...", "info");
+    const btnSim = DOM.btnSimulateSuccessPayment;
+    const originalSimText = btnSim ? btnSim.textContent : "";
+    if (btnSim) {
+      btnSim.disabled = true;
+      btnSim.textContent = "Memproses simulasi...";
+    }
 
     try {
       const resp = await fetch("/api/payment/simulate", {
@@ -2289,17 +2474,19 @@
         throw new Error(`Simulasi gagal: Server tidak mengembalikan respons yang valid (HTTP ${resp.status})`);
       }
       if (!resp.ok || !res.success) {
-        throw new Error((res && res.message) || `Gagal memproses simulasi di server Pakasir (HTTP ${resp.status}).`);
+        throw new Error((res && res.message) || `Gagal memproses simulasi transaksi (HTTP ${resp.status}).`);
       }
 
-      showToast("Server Pakasir menyetujui transaksi simulasi. Menunggu 4 detik untuk verifikasi status...", "info");
+      if (btnSim) {
+        btnSim.textContent = "Memverifikasi status...";
+      }
 
-      // Tunggu jeda rate limit 4.2 detik agar API transaction-status Pakasir dapat diakses
+      // Verifikasi status otomatis di background secara senyap setelah jeda aman
       setTimeout(async () => {
-        await handleCheckPaymentStatus();
+        await handleCheckPaymentStatus(true);
       }, 4200);
     } catch (e) {
-      console.warn("Simulasi API gagal, beralih ke simulasi lokal:", e.message);
+      console.warn("Simulasi API dialihkan ke simulasi lokal:", e.message);
       const activeUser = window.AuthManager ? AuthManager.currentUser : null;
       state.lastCompletedOrder = {
         ...state.currentPaymentOrder,
@@ -2328,10 +2515,17 @@
         }
       }
 
-      showToast("Pembayaran berhasil diverifikasi (mode simulasi). Akses aktif.", "success");
+      hideToast();
       updateSubscriptionBadgeUI();
       updateDashboard();
       navigateTo(ROUTES.PAYMENT_SUCCESS);
+    } finally {
+      if (btnSim) {
+        setTimeout(() => {
+          btnSim.disabled = false;
+          btnSim.textContent = originalSimText;
+        }, 5000);
+      }
     }
   }
 
@@ -2393,7 +2587,7 @@
 
     if (DOM.formAddLogbook) DOM.formAddLogbook.reset();
     if (DOM.modalFormTitle) DOM.modalFormTitle.textContent = "Catat Logbook Baru";
-    if (DOM.modalFormSubtitle) DOM.modalFormSubtitle.textContent = "Aktivitas Penelitian Lapangan Skripsi";
+    if (DOM.modalFormSubtitle) DOM.modalFormSubtitle.textContent = "Aktivitas Penelitian Lapangan";
     if (DOM.btnSubmitText) DOM.btnSubmitText.textContent = "Simpan Catatan Lapangan";
 
     // Nilai Default
@@ -3486,15 +3680,31 @@
   // ==========================================================================
   // 9. HELPER TOAST, FORMAT TANGGAL & STRING
   // ==========================================================================
+  let toastTimer = null;
+
   function showToast(msg, type = "info") {
     if (!DOM.toastMessage) return;
+    if (toastTimer) {
+      clearTimeout(toastTimer);
+      toastTimer = null;
+    }
     DOM.toastMessage.textContent = msg;
     DOM.toastMessage.className = `toast ${type}`;
     DOM.toastMessage.classList.remove("hidden");
 
-    setTimeout(() => {
-      DOM.toastMessage.classList.add("hidden");
+    toastTimer = setTimeout(() => {
+      hideToast();
     }, 3500);
+  }
+
+  function hideToast() {
+    if (toastTimer) {
+      clearTimeout(toastTimer);
+      toastTimer = null;
+    }
+    if (DOM.toastMessage) {
+      DOM.toastMessage.classList.add("hidden");
+    }
   }
 
   function formatDateIndo(dateStr) {
@@ -3568,7 +3778,7 @@
         if (DOM.linkForgotPasswordArea) DOM.linkForgotPasswordArea.classList.add("hidden");
         if (DOM.btnSubmitAuthText) DOM.btnSubmitAuthText.textContent = "Daftar Akun Baru";
         if (DOM.authBoxTitle) DOM.authBoxTitle.textContent = "Daftar Akun Baru";
-        if (DOM.authBoxSubtitle) DOM.authBoxSubtitle.textContent = "Daftarkan identitas mahasiswa dan email Anda";
+        if (DOM.authBoxSubtitle) DOM.authBoxSubtitle.textContent = "Daftarkan identitas peneliti dan email Anda";
         if (DOM.authNoticeBox) DOM.authNoticeBox.classList.add("hidden");
       });
     }
@@ -3587,7 +3797,7 @@
         // Validasi khusus mode registrasi
         if (isRegisterMode) {
           if (!name) {
-            showToast("Nama lengkap mahasiswa wajib diisi.", "error");
+            showToast("Nama lengkap peneliti wajib diisi.", "error");
             if (DOM.authNameInput) DOM.authNameInput.focus();
             return;
           }
@@ -3830,11 +4040,110 @@
       }
     });
 
-    const brandEl = document.querySelector(".brand");
-    if (brandEl) {
-      brandEl.style.cursor = "pointer";
-      brandEl.addEventListener("click", () => {
-        navigateTo(ROUTES.DASHBOARD);
+    // Navigasi Brand Logo Header (Arahkan ke Beranda / Landing Page)
+    const brandLinkEl = document.getElementById("brandHeaderLink") || document.querySelector(".brand");
+    if (brandLinkEl) {
+      brandLinkEl.style.cursor = "pointer";
+      brandLinkEl.addEventListener("click", (e) => {
+        e.preventDefault();
+        navigateTo(ROUTES.HOME);
+      });
+    }
+
+    // Aksi Interaktif Landing Page Resmi (Route: /)
+    const btnLandingHeroStart = document.getElementById("btnLandingHeroStart");
+    if (btnLandingHeroStart) {
+      btnLandingHeroStart.addEventListener("click", (e) => {
+        if (e && typeof e.preventDefault === "function") {
+          e.preventDefault();
+        }
+        const user = window.AuthManager ? AuthManager.currentUser : null;
+        if (user && (user.isDemo || user.emailVerified)) {
+          navigateTo(ROUTES.DASHBOARD);
+        } else {
+          navigateTo(ROUTES.LOGIN);
+        }
+      });
+    }
+
+    const btnLandingPricingAction = document.getElementById("btnLandingPricingAction");
+    if (btnLandingPricingAction) {
+      btnLandingPricingAction.addEventListener("click", () => {
+        const user = window.AuthManager ? AuthManager.currentUser : null;
+        if (user && (user.isDemo || user.emailVerified)) {
+          if (AuthManager.isSubscribed()) {
+            navigateTo(ROUTES.DASHBOARD);
+          } else {
+            navigateTo(ROUTES.CHECKOUT);
+          }
+        } else {
+          navigateTo(ROUTES.LOGIN);
+        }
+      });
+    }
+
+    const linkFooterLogin = document.getElementById("linkFooterLogin");
+    if (linkFooterLogin) {
+      linkFooterLogin.addEventListener("click", (e) => {
+        e.preventDefault();
+        const user = window.AuthManager ? AuthManager.currentUser : null;
+        if (user && (user.isDemo || user.emailVerified)) {
+          navigateTo(ROUTES.DASHBOARD);
+        } else {
+          navigateTo(ROUTES.LOGIN);
+        }
+      });
+    }
+
+    const linkFooterRegister = document.getElementById("linkFooterRegister");
+    if (linkFooterRegister) {
+      linkFooterRegister.addEventListener("click", (e) => {
+        e.preventDefault();
+        const user = window.AuthManager ? AuthManager.currentUser : null;
+        if (user && (user.isDemo || user.emailVerified)) {
+          navigateTo(ROUTES.DASHBOARD);
+        } else {
+          navigateTo(ROUTES.LOGIN);
+          if (DOM.tabBtnRegister) DOM.tabBtnRegister.click();
+        }
+      });
+    }
+
+    const brandFooterLink = document.getElementById("brandFooterLink");
+    if (brandFooterLink) {
+      brandFooterLink.addEventListener("click", (e) => {
+        e.preventDefault();
+        navigateTo(ROUTES.HOME);
+      });
+    }
+
+    // Delegasi Interaksi Tombol "Lacak Sesi Logbook" pada Landing Page V3
+    const viewLandingPage = document.getElementById("viewLandingPage");
+    if (viewLandingPage) {
+      viewLandingPage.addEventListener("click", (e) => {
+        const btnTrack = e.target.closest(".v3-btn-track, .v2-btn-track-action");
+        if (btnTrack) {
+          const user = window.AuthManager ? AuthManager.currentUser : null;
+          if (user && (user.isDemo || user.emailVerified)) {
+            navigateTo(ROUTES.DASHBOARD);
+            showToast("Buka sesi logbook terkait di dashboard kerja.", "info");
+          } else {
+            navigateTo(ROUTES.LOGIN);
+          }
+        }
+      });
+    }
+
+    const linkFooterDashboard = document.getElementById("linkFooterDashboard");
+    if (linkFooterDashboard) {
+      linkFooterDashboard.addEventListener("click", (e) => {
+        e.preventDefault();
+        const user = window.AuthManager ? AuthManager.currentUser : null;
+        if (user && (user.isDemo || user.emailVerified)) {
+          navigateTo(ROUTES.DASHBOARD);
+        } else {
+          navigateTo(ROUTES.LOGIN);
+        }
       });
     }
 

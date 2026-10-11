@@ -1,0 +1,28 @@
+{
+  "name": "LogbookRiset - Sistem Logbook Penelitian Lapangan",
+  "short_name": "LogbookRiset",
+  "description": "Platform resmi pencatatan logbook penelitian dan riset lapangan terpadu, dokumentasi foto GPS, rekaman wawancara cloud, dan ekspor Word (.docx)",
+  "icons": [
+    {
+      "src": "/assets/img/android-chrome-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/assets/img/android-chrome-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/assets/img/android-chrome-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "theme_color": "#064e3b",
+  "background_color": "#ffffff",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "orientation": "portrait"
+}

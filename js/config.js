@@ -6,7 +6,7 @@
 const CONFIG = {
   // Nama Peneliti & Proyek
   APP_TITLE: "Logbook Aktivitas Penelitian Lapangan",
-  RESEARCHER_NAME: "Peneliti Mahasiswa",
+  RESEARCHER_NAME: "Peneliti Lapangan",
   STUDENT_ID: "0000000000",
   INSTITUTION: "Program Studi / Perguruan Tinggi Anda",
   RESEARCH_TOPIC: "Penelitian Lapangan & Pengambilan Data Mandiri",
@@ -52,7 +52,7 @@ const CONFIG = {
       desa: "Desa Contoh 1",
       jenisKegiatan: "Wawancara Informan Kunci",
       sasaranResponden: "[Contoh] Tokoh Masyarakat / Informan Kunci (Data Simulasi)",
-      deskripsi: "[DATA CONTOH SIMULASI] Wawancara mendalam simulasi untuk pengujian format rekapitulasi lapangan, pencatatan durasi kegiatan, dan kesiapan berkas pendukung skripsi.",
+      deskripsi: "[DATA CONTOH SIMULASI] Wawancara mendalam simulasi untuk pengujian format rekapitulasi lapangan, pencatatan durasi kegiatan, dan kesiapan berkas laporan kegiatan riset.",
       tanggal: "2026-10-07",
       waktuMulai: "09:00",
       waktuSelesai: "10:45",

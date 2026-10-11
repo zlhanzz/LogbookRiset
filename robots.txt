@@ -1,0 +1,58 @@
+# Robots.txt untuk LogbookRiset (https://logbookriset.web.id)
+# Mengizinkan perayapan penuh mesin pencari dan AI Agent pada halaman publik
+
+User-agent: *
+Allow: /
+Allow: /pricing
+Allow: /login
+Allow: /llms.txt
+Allow: /site.webmanifest
+Allow: /sitemap.xml
+Disallow: /api/
+Disallow: /checkout
+Disallow: /payment-success
+
+# AI Agents & LLM Search Crawlers (Generative Engine Optimization - GEO)
+User-agent: GPTBot
+Allow: /
+Allow: /pricing
+Allow: /login
+Allow: /llms.txt
+
+User-agent: OAI-SearchBot
+Allow: /
+Allow: /pricing
+Allow: /login
+Allow: /llms.txt
+
+User-agent: PerplexityBot
+Allow: /
+Allow: /pricing
+Allow: /login
+Allow: /llms.txt
+
+User-agent: ClaudeBot
+Allow: /
+Allow: /pricing
+Allow: /login
+Allow: /llms.txt
+
+User-agent: Google-Extended
+Allow: /
+Allow: /pricing
+Allow: /login
+Allow: /llms.txt
+
+User-agent: Applebot-Extended
+Allow: /
+Allow: /pricing
+Allow: /login
+Allow: /llms.txt
+
+User-agent: CCBot
+Allow: /
+Allow: /pricing
+Allow: /login
+Allow: /llms.txt
+
+Sitemap: https://logbookriset.web.id/sitemap.xml

@@ -315,11 +315,11 @@ const DocxExporter = {
 
     return {
       name: name.trim() || "[Nama Peneliti]",
-      nim: nim.trim() || "[NIM Mahasiswa]",
+      nim: nim.trim() || "[ID Peneliti]",
       university: university.trim() || "[Nama Universitas / Perguruan Tinggi]",
       major: major.trim() || "[Program Studi / Departemen]",
       researchTopic: topic.trim() || "[Topik / Judul Penelitian Lapangan]",
-      supervisor: supervisor.trim() || "[Nama Dosen Pembimbing]",
+      supervisor: supervisor.trim() || "[Nama Supervisor Riset]",
       supervisorNip: supervisorNip.trim() || "",
       timezone: timezone || "WITA"
     };
@@ -703,7 +703,7 @@ const DocxExporter = {
               },
               children: [
                 new Paragraph({
-                  children: [new TextRun({ text: "Mengetahui,\nDosen Pembimbing Lapangan / Skripsi", font: "Arial", size: 18 })]
+                  children: [new TextRun({ text: "Mengetahui,\nSupervisor / Penanggung Jawab Riset", font: "Arial", size: 18 })]
                 }),
                 new Paragraph({ children: [new TextRun({ text: "\n\n\n\n", font: "Arial" })] }),
                 new Paragraph({
@@ -727,7 +727,7 @@ const DocxExporter = {
                   alignment: AlignmentType.RIGHT,
                   children: [
                     new TextRun({
-                      text: `Lokasi Riset / Kampus, ${this.formatDateIndo(new Date().toISOString().split("T")[0])}\nPeneliti / Mahasiswa,`,
+                      text: `Lokasi Riset / Kampus, ${this.formatDateIndo(new Date().toISOString().split("T")[0])}\nPeneliti Lapangan,`,
                       font: "Arial",
                       size: 18
                     })
@@ -942,12 +942,12 @@ const DocxExporter = {
         <table style="width:100%; border:none; margin-top:20px; font-size:11pt;">
           <tr>
             <td style="width:50%; border:none;">
-              Mengetahui,<br>Dosen Pembimbing Lapangan / Skripsi<br><br><br><br>
+              Mengetahui,<br>Supervisor / Penanggung Jawab Riset<br><br><br><br>
               <b>( ${profile.supervisor || "__________________________________"} )</b><br>
               NIP. ${profile.supervisorNip || "__________________"}
             </td>
             <td style="width:50%; border:none; text-align:right;">
-              Lokasi Riset / Kampus, ${this.formatDateIndo(new Date().toISOString().split("T")[0])}<br>Peneliti / Mahasiswa,<br><br><br><br>
+              Lokasi Riset / Kampus, ${this.formatDateIndo(new Date().toISOString().split("T")[0])}<br>Peneliti Lapangan,<br><br><br><br>
               <b>( ${profile.name} )</b><br>
               NIM. ${profile.nim}
             </td>
