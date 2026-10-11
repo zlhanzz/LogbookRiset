@@ -319,6 +319,7 @@
     exportDateEnd: document.getElementById("exportDateEnd"),
     exportSummaryCount: document.getElementById("exportSummaryCount"),
     btnDownloadWordAction: document.getElementById("btnDownloadWordAction"),
+    exportIncludeTranscript: document.getElementById("exportIncludeTranscript"),
     exportSpinner: document.getElementById("exportSpinner"),
 
     // Modal Lightbox Foto & Toast
@@ -1709,7 +1710,7 @@
       card.id = `mediaSessionCard-${entry.id}`;
 
       // Render daftar player media yang sesuai filter
-      const playersHtml = mediaToShow.map(m => {
+      const playersHtml = mediaToShow.map((m, mIdx) => {
         const isVideo = m.file_type === "video" || (m.mime_type && m.mime_type.startsWith("video/"));
         const fileId = m.file_id || "";
         const primaryStreamUrl = `/api/media/stream?file_id=${encodeURIComponent(fileId)}`;
@@ -1717,6 +1718,7 @@
         const directDownloadFallback = fileId ? `https://drive.usercontent.google.com/download?id=${encodeURIComponent(fileId)}&export=download` : "";
         const streamUrl = m.stream_url || primaryStreamUrl;
         const formattedSize = formatBytes(m.size);
+        const transcript = (m.transcript || (mIdx === 0 ? entry.transcript : "") || "").trim();
 
         return `
           <div class="media-player-item-block">
@@ -1759,6 +1761,38 @@
               <span class="media-file-info-name" title="${escapeHtml(m.file_name || "berkas")}">${escapeHtml(m.file_name || "berkas")}</span>
               <span class="media-file-info-size">${formattedSize}</span>
             </div>
+
+            <!-- Auto-Transkrip Wawancara (Hanya untuk Rekaman Audio Lapangan) -->
+            ${!isVideo ? `
+            <div class="media-transcript-block" id="transcriptBlock_${entry.id}_${mIdx}">
+              <div class="transcript-action-bar">
+                ${transcript ? `
+                  <button type="button" class="btn-transcript-toggle" onclick="toggleTranscriptView('${entry.id}', ${mIdx})">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+                    <span>Transkrip Wawancara</span>
+                    <span class="transcript-badge-ready">Tersedia</span>
+                  </button>
+                ` : `
+                  <button type="button" class="btn-transcript-start" id="btnTranscribe_${entry.id}_${mIdx}" onclick="triggerAutoTranscription('${entry.id}', ${mIdx}, '${escapeHtml(fileId)}', '${escapeHtml(m.file_name || "")}', ${Number(m.size || 0)})">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+                    <span>Auto-Transkrip (Whisper AI)</span>
+                  </button>
+                `}
+              </div>
+
+              <div class="transcript-content-box hidden" id="transcriptContent_${entry.id}_${mIdx}">
+                <div class="transcript-header-row">
+                  <span class="transcript-title">Transkrip Percakapan:</span>
+                  <div class="transcript-actions">
+                    <button type="button" class="btn-copy-transcript" onclick="copyTranscriptText('${entry.id}', ${mIdx})">Salin Teks</button>
+                    <button type="button" class="btn-close-transcript" onclick="toggleTranscriptView('${entry.id}', ${mIdx})">Tutup</button>
+                  </div>
+                </div>
+                <div class="transcript-text" id="transcriptText_${entry.id}_${mIdx}" contenteditable="true" onblur="saveEditedTranscript('${entry.id}', ${mIdx}, this.innerText)">${escapeHtml(transcript)}</div>
+                <div class="transcript-hint">Koreksi teks di atas otomatis tersimpan ke Cloud dan siap diekspor ke Word (.docx).</div>
+              </div>
+            </div>
+            ` : ""}
           </div>
         `;
       }).join("");
@@ -1855,6 +1889,370 @@
       showToast(`Menampilkan catatan logbook: ${entry.sasaranResponden || entry.jenisKegiatan} (${formatDateIndo(entry.tanggal)})`, "info");
     }, 150);
   }
+
+  // ========================================================================
+  // AUTO-TRANSKRIP SPEECH-TO-TEXT (GROQ WHISPER LARGE V3)
+  // DILENGKAPI RESAMPLING 16.000 Hz MONO & CHUNKING OTOMATIS
+  // ========================================================================
+
+  /**
+   * Helper encode Float32Array PCM sample ke 16-bit PCM WAV (Mono, 16kHz)
+   */
+  function encodeWavPCM16(samples, sampleRate) {
+    const buffer = new ArrayBuffer(44 + samples.length * 2);
+    const view = new DataView(buffer);
+
+    function writeStr(offset, str) {
+      for (let i = 0; i < str.length; i++) {
+        view.setUint8(offset + i, str.charCodeAt(i));
+      }
+    }
+
+    // RIFF header
+    writeStr(0, 'RIFF');
+    view.setUint32(4, 36 + samples.length * 2, true);
+    writeStr(8, 'WAVE');
+
+    // fmt subchunk
+    writeStr(12, 'fmt ');
+    view.setUint32(16, 16, true); // PCM subchunk size
+    view.setUint16(20, 1, true);  // AudioFormat = 1 (PCM)
+    view.setUint16(22, 1, true);  // 1 Channel (Mono)
+    view.setUint32(24, sampleRate, true); // 16000 Hz
+    view.setUint32(28, sampleRate * 2, true); // ByteRate
+    view.setUint16(32, 2, true);  // BlockAlign
+    view.setUint16(34, 16, true); // BitsPerSample = 16
+
+    // data subchunk
+    writeStr(36, 'data');
+    view.setUint32(40, samples.length * 2, true);
+
+    let offset = 44;
+    for (let i = 0; i < samples.length; i++) {
+      let s = Math.max(-1, Math.min(1, samples[i]));
+      view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+      offset += 2;
+    }
+
+    return buffer;
+  }
+
+  /**
+   * Downsampling audio ke 16kHz Mono dan memotongnya ke segmen (misal per 10 menit = 600 detik)
+   */
+  async function downsampleAndChunkAudio(arrayBuffer, segmentDurationSec = 600) {
+    const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtxClass) {
+      throw new Error("Peramban Anda tidak mendukung Web Audio API untuk kompresi audio.");
+    }
+    const audioCtx = new AudioCtxClass();
+    let decodedBuffer;
+    try {
+      decodedBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+    } finally {
+      if (audioCtx.close) audioCtx.close();
+    }
+
+    const TARGET_SAMPLE_RATE = 16000;
+    const totalSamples = Math.ceil(decodedBuffer.duration * TARGET_SAMPLE_RATE);
+    const offlineCtx = new (window.OfflineAudioContext || window.webkitOfflineAudioContext)(
+      1,
+      totalSamples,
+      TARGET_SAMPLE_RATE
+    );
+
+    const source = offlineCtx.createBufferSource();
+    source.buffer = decodedBuffer;
+    source.connect(offlineCtx.destination);
+    source.start(0);
+
+    const renderedBuffer = await offlineCtx.startRendering();
+    const monoData = renderedBuffer.getChannelData(0);
+
+    const samplesPerChunk = segmentDurationSec * TARGET_SAMPLE_RATE;
+    const chunks = [];
+
+    if (monoData.length <= samplesPerChunk) {
+      // Audio <= 10 menit -> 1 segmen saja
+      const wav = encodeWavPCM16(monoData, TARGET_SAMPLE_RATE);
+      chunks.push({
+        name: 'wawancara_16khz.wav',
+        blob: new Blob([wav], { type: 'audio/wav' }),
+        label: 'Durasi Lengkap'
+      });
+    } else {
+      // Audio panjang (misal 30m, 1 jam, 2 jam) -> potong per 10 menit
+      let startSample = 0;
+      let chunkIdx = 1;
+      while (startSample < monoData.length) {
+        const endSample = Math.min(startSample + samplesPerChunk, monoData.length);
+        const chunkSamples = monoData.subarray(startSample, endSample);
+        const wav = encodeWavPCM16(chunkSamples, TARGET_SAMPLE_RATE);
+
+        const startMin = Math.floor((startSample / TARGET_SAMPLE_RATE) / 60);
+        const endMin = Math.floor((endSample / TARGET_SAMPLE_RATE) / 60);
+
+        chunks.push({
+          name: `wawancara_part_${chunkIdx}.wav`,
+          blob: new Blob([wav], { type: 'audio/wav' }),
+          label: `${startMin}:00 - ${endMin}:00`
+        });
+
+        startSample = endSample;
+        chunkIdx++;
+      }
+    }
+
+    return chunks;
+  }
+
+  window.triggerAutoTranscription = async function(logbookId, mIdx, fileId, fileName, fileSize = 0) {
+    const btn = document.getElementById(`btnTranscribe_${logbookId}_${mIdx}`);
+    if (!fileId) {
+      showToast("Berkas media tidak memiliki ID cloud untuk ditranskripsi.", "error");
+      return;
+    }
+
+    const originalHtml = btn ? btn.innerHTML : "";
+    function setBtnLoading(msg) {
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = `
+          <span class="spinner-small" style="display:inline-block; width:12px; height:12px; border:2px solid #fff; border-top-color:transparent; border-radius:50%; animation:spin 0.8s linear infinite;"></span>
+          <span>${escapeHtml(msg)}</span>
+        `;
+      }
+    }
+
+    setBtnLoading("Mentranskrip via Whisper AI...");
+
+    try {
+      let finalTranscript = "";
+      const MAX_DIRECT_SIZE = 24 * 1024 * 1024; // 24 MB aman
+
+      // JALUR 1: Jika ukuran berkas diketahui <= 24 MB, coba transkrip langsung lewat Cloud
+      let shouldFallbackToClientCompression = fileSize > MAX_DIRECT_SIZE;
+
+      if (!shouldFallbackToClientCompression) {
+        try {
+          const res = await fetch("/api/transcribe", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ file_id: fileId, logbook_id: logbookId, file_name: fileName || "" })
+          });
+
+          const rawText = await res.text();
+          let data = {};
+          try {
+            data = JSON.parse(rawText);
+          } catch (pe) {
+            if (!res.ok) {
+              throw new Error(`Server mengembalikan respon HTTP ${res.status}. Pastikan fungsi cloud /api/transcribe telah di-deploy.`);
+            }
+            throw new Error("Respon server bukan format JSON yang valid.");
+          }
+
+          if (data.requires_client_chunking || res.status === 413) {
+            shouldFallbackToClientCompression = true;
+          } else if (!res.ok || !data.success) {
+            throw new Error(data.message || `Gagal transkrip (HTTP ${res.status})`);
+          } else {
+            finalTranscript = (data.text || "").trim();
+          }
+        } catch (directErr) {
+          if (directErr.message && (directErr.message.includes("413") || directErr.message.includes("batas 25 MB"))) {
+            shouldFallbackToClientCompression = true;
+          } else {
+            throw directErr;
+          }
+        }
+      }
+
+      // JALUR 2: Jika berkas berukuran besar (>24 MB), kompresi & chunking di browser via Web Audio API
+      if (shouldFallbackToClientCompression && !finalTranscript) {
+        setBtnLoading("Mengunduh audio untuk optimasi 16kHz...");
+        const streamUrl = `/api/media/stream?file_id=${encodeURIComponent(fileId)}`;
+        const streamRes = await fetch(streamUrl);
+        if (!streamRes.ok) {
+          throw new Error(`Gagal mengunduh audio untuk kompresi (HTTP ${streamRes.status})`);
+        }
+        const arrayBuf = await streamRes.arrayBuffer();
+
+        setBtnLoading("Mengompresi ke 16.000 Hz Mono Whisper...");
+        const chunks = await downsampleAndChunkAudio(arrayBuf, 600); // Potong per 10 menit (< 20 MB/chunk)
+
+        const chunkTranscripts = [];
+        for (let cIdx = 0; cIdx < chunks.length; cIdx++) {
+          const c = chunks[cIdx];
+          setBtnLoading(`Mentranskripsi segmen ${cIdx + 1} dari ${chunks.length} (${c.label})...`);
+
+          const chunkRes = await fetch(`/api/transcribe?file_name=${encodeURIComponent(c.name)}`, {
+            method: "POST",
+            headers: { "Content-Type": "audio/wav" },
+            body: c.blob
+          });
+
+          const chunkRaw = await chunkRes.text();
+          let chunkData = {};
+          try {
+            chunkData = JSON.parse(chunkRaw);
+          } catch (pe) {
+            throw new Error(`Gagal memproses segmen ${cIdx + 1}: HTTP ${chunkRes.status}`);
+          }
+
+          if (!chunkRes.ok || !chunkData.success) {
+            throw new Error(chunkData.message || `Gagal mentranskripsi segmen ${cIdx + 1}`);
+          }
+
+          const txt = (chunkData.text || "").trim();
+          if (txt) {
+            if (chunks.length > 1) {
+              chunkTranscripts.push(`[${c.label}]\n${txt}`);
+            } else {
+              chunkTranscripts.push(txt);
+            }
+          }
+        }
+
+        finalTranscript = chunkTranscripts.join("\n\n").trim();
+      }
+
+      const transcriptText = (finalTranscript || "").trim();
+      if (!transcriptText) {
+        throw new Error("Hasil transkrip kosong. Pastikan suara rekaman terdengar jelas.");
+      }
+
+      // Perbarui state entries
+      const entry = state.entries.find(e => e.id === logbookId);
+      if (entry) {
+        if (Array.isArray(entry.wawancara_media) && entry.wawancara_media[mIdx]) {
+          entry.wawancara_media[mIdx].transcript = transcriptText;
+        }
+        if (Array.isArray(entry.recordings) && entry.recordings[mIdx]) {
+          entry.recordings[mIdx].transcript = transcriptText;
+        }
+        if (Array.isArray(entry.media_files) && entry.media_files[mIdx]) {
+          entry.media_files[mIdx].transcript = transcriptText;
+        }
+        if (!entry.transcript) {
+          entry.transcript = transcriptText;
+        }
+
+        // Simpan permanen ke Firestore & cache lokal
+        const user = window.AuthManager ? AuthManager.currentUser : null;
+        if (user && window.FirebaseService && FirebaseService.db) {
+          try {
+            await FirebaseService.db
+              .collection("users")
+              .doc(user.uid)
+              .collection("logbooks")
+              .doc(logbookId)
+              .update({
+                wawancara_media: entry.wawancara_media || [],
+                transcript: entry.transcript || transcriptText,
+                updatedAt: new Date().toISOString()
+              });
+          } catch (dbErr) {
+            console.warn("Gagal update transkrip ke Firestore:", dbErr);
+          }
+        }
+        if (user) {
+          saveEntriesToLocalStorage(state.entries, user);
+        }
+      }
+
+      showToast("Transkrip wawancara berhasil dibuat dan disimpan!", "success");
+
+      // Tampilkan teks hasil transkrip
+      const contentBox = document.getElementById(`transcriptContent_${logbookId}_${mIdx}`);
+      const textBox = document.getElementById(`transcriptText_${logbookId}_${mIdx}`);
+      if (textBox) textBox.innerText = transcriptText;
+      if (contentBox) contentBox.classList.remove("hidden");
+
+      // Perbarui tombol menjadi tombol buka/tutup transkrip
+      const block = document.getElementById(`transcriptBlock_${logbookId}_${mIdx}`);
+      if (block) {
+        const actionBar = block.querySelector(".transcript-action-bar");
+        if (actionBar) {
+          actionBar.innerHTML = `
+            <button type="button" class="btn-transcript-toggle" onclick="toggleTranscriptView('${logbookId}', ${mIdx})">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+              <span>Transkrip Wawancara</span>
+              <span class="transcript-badge-ready">Tersedia</span>
+            </button>
+          `;
+        }
+      }
+    } catch (err) {
+      console.error("Gagal auto-transkrip:", err);
+      showToast("Gagal auto-transkrip: " + err.message, "error");
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = originalHtml;
+      }
+    }
+  };
+
+  window.toggleTranscriptView = function(logbookId, mIdx) {
+    const contentBox = document.getElementById(`transcriptContent_${logbookId}_${mIdx}`);
+    if (contentBox) {
+      contentBox.classList.toggle("hidden");
+    }
+  };
+
+  window.copyTranscriptText = function(logbookId, mIdx) {
+    const textBox = document.getElementById(`transcriptText_${logbookId}_${mIdx}`);
+    if (textBox) {
+      const text = textBox.innerText || "";
+      if (!text) {
+        showToast("Teks transkrip masih kosong.", "info");
+        return;
+      }
+      navigator.clipboard.writeText(text).then(() => {
+        showToast("Teks transkrip berhasil disalin ke papan klip!", "success");
+      }).catch(() => {
+        showToast("Gagal menyalin teks secara otomatis.", "warning");
+      });
+    }
+  };
+
+  window.saveEditedTranscript = async function(logbookId, mIdx, newText) {
+    const cleanText = (newText || "").trim();
+    const entry = state.entries.find(e => e.id === logbookId);
+    if (!entry) return;
+
+    if (Array.isArray(entry.wawancara_media) && entry.wawancara_media[mIdx]) {
+      entry.wawancara_media[mIdx].transcript = cleanText;
+    }
+    if (Array.isArray(entry.recordings) && entry.recordings[mIdx]) {
+      entry.recordings[mIdx].transcript = cleanText;
+    }
+    if (Array.isArray(entry.media_files) && entry.media_files[mIdx]) {
+      entry.media_files[mIdx].transcript = cleanText;
+    }
+    entry.transcript = cleanText;
+
+    const user = window.AuthManager ? AuthManager.currentUser : null;
+    if (user && window.FirebaseService && FirebaseService.db) {
+      try {
+        await FirebaseService.db
+          .collection("users")
+          .doc(user.uid)
+          .collection("logbooks")
+          .doc(logbookId)
+          .update({
+            wawancara_media: entry.wawancara_media || [],
+            transcript: cleanText,
+            updatedAt: new Date().toISOString()
+          });
+      } catch (e) {
+        console.warn("Gagal simpan edit transkrip ke Firestore:", e);
+      }
+    }
+    if (user) {
+      saveEntriesToLocalStorage(state.entries, user);
+    }
+  };
 
   function renderExistingLogbookMedia(item) {
     if (!DOM.existingLogbookMediaArea || !DOM.existingLogbookMediaList) return;
@@ -3674,7 +4072,8 @@
         await window.DocxExporter.exportToDocx(selected, {
           title: "LOGBOOK AKTIVITAS PENELITIAN LAPANGAN",
           filterDescription: `Ekspor ${kabTitle}`,
-          kabupaten: kabTitle
+          kabupaten: kabTitle,
+          includeTranscript: DOM.exportIncludeTranscript ? DOM.exportIncludeTranscript.checked : false
         });
         showToast("Dokumen Word (.docx) berhasil diunduh!", "success");
         closeExportModal();

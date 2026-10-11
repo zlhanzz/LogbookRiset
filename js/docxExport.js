@@ -70,6 +70,60 @@ const DocxExporter = {
   },
 
   /**
+   * Ekstrak daftar transkrip unik dari satu entri logbook.
+   * Mencegah duplikasi antara rekaman media spesifik dan properti root entry.transcript.
+   */
+  getUniqueTranscripts(entry) {
+    if (!entry) return [];
+    const items = [];
+    const seenTexts = new Set();
+    const seenFileIds = new Set();
+
+    // 1. Kumpulkan seluruh sumber media (wawancara_media, recordings, media_files)
+    const mediaSources = [
+      ...(Array.isArray(entry.wawancara_media) ? entry.wawancara_media : []),
+      ...(Array.isArray(entry.recordings) ? entry.recordings : []),
+      ...(Array.isArray(entry.media_files) ? entry.media_files : [])
+    ];
+
+    // 2. Prioritaskan rekaman media spesifik (karena memiliki nama berkas riil)
+    mediaSources.forEach(m => {
+      if (!m) return;
+      const rawText = (m.transcript || "").trim();
+      if (!rawText) return;
+
+      const fileId = m.file_id || m.id || m.fileId || "";
+      const normalized = rawText.replace(/\s+/g, " ");
+
+      if (fileId && seenFileIds.has(fileId)) return;
+      if (seenTexts.has(normalized)) return;
+
+      if (fileId) seenFileIds.add(fileId);
+      seenTexts.add(normalized);
+
+      items.push({
+        fileName: m.file_name || m.name || "Rekaman Wawancara",
+        text: rawText
+      });
+    });
+
+    // 3. Cek entry.transcript (jika ada catatan transkrip tambahan yang belum tercakup di media)
+    if (typeof entry.transcript === "string" && entry.transcript.trim()) {
+      const rawText = entry.transcript.trim();
+      const normalized = rawText.replace(/\s+/g, " ");
+      if (!seenTexts.has(normalized)) {
+        seenTexts.add(normalized);
+        items.push({
+          fileName: "Rekaman Wawancara",
+          text: rawText
+        });
+      }
+    }
+
+    return items;
+  },
+
+  /**
    * Helper konversi URL atau Base64 Image ke Uint8Array dengan timeout pelindung
    * Mendukung direct Base64, direct fetch, image proxy fallback, dan DOM Image extraction
    */
@@ -748,6 +802,200 @@ const DocxExporter = {
       ]
     });
 
+    // Susun Lampiran Transkrip Wawancara jika opsi includeTranscript dicentang
+    const transcriptParagraphs = [];
+    if (filterMeta.includeTranscript) {
+      const entriesWithTranscript = sortedEntries.filter(e => {
+        return this.getUniqueTranscripts(e).length > 0;
+      });
+
+      if (entriesWithTranscript.length > 0) {
+        transcriptParagraphs.push(
+          new Paragraph({
+            pageBreakBefore: true,
+            alignment: AlignmentType.CENTER,
+            children: [
+              new TextRun({
+                text: "LAMPIRAN: TRANSKRIP REKAMAN WAWANCARA LAPANGAN",
+                bold: true,
+                size: 24,
+                font: "Arial",
+                color: "064E3B"
+              })
+            ]
+          }),
+          new Paragraph({
+            alignment: AlignmentType.CENTER,
+            children: [
+              new TextRun({
+                text: "Hasil Transkripsi Rekaman Otomatis Berbasis Kecerdasan Buatan (Groq Whisper Large v3)",
+                italics: true,
+                size: 16,
+                font: "Arial",
+                color: "64748B"
+              })
+            ]
+          }),
+          new Paragraph({ children: [new TextRun({ text: "", size: 20 })] })
+        );
+
+        entriesWithTranscript.forEach((entry, idx) => {
+          const logbookNo = sortedEntries.indexOf(entry) + 1;
+          const tgl = this.formatDateIndo(entry.tanggal);
+          const waktu = this.formatTimeRange(
+            entry.waktuMulai || entry.jamMulai,
+            entry.waktuSelesai || entry.jamSelesai,
+            profile.timezone
+          );
+          const rawResponden = (
+            entry.sasaranResponden ||
+            entry.sasaranNarasumber ||
+            entry.narasumber ||
+            entry.pihakTerlibat ||
+            entry.informan ||
+            ""
+          ).trim();
+          const namaResponden = rawResponden || "Narasumber Lapangan";
+          const jenisKegiatan = (entry.jenisKegiatan || entry.kategori || "-").trim();
+          const lokasi = [
+            entry.dusun ? `Dusun ${entry.dusun}` : "",
+            entry.desa ? `Desa/Kel. ${entry.desa}` : "",
+            entry.kecamatan ? `Kec. ${entry.kecamatan}` : "",
+            entry.kabupaten ? `Kab. ${entry.kabupaten}` : ""
+          ].filter(Boolean).join(", ") || "-";
+          const deskripsi = (entry.deskripsi || entry.uraian || entry.aktivitas || "-").trim();
+          const output = (entry.output || entry.capaian || "-").trim();
+
+          const headingText = rawResponden
+            ? `Lampiran ${idx + 1}. Transkrip Wawancara: ${rawResponden} (Rujukan: Logbook No. ${logbookNo})`
+            : `Lampiran ${idx + 1}. Transkrip Rekaman Wawancara (Rujukan: Logbook No. ${logbookNo})`;
+
+          transcriptParagraphs.push(
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: headingText,
+                  bold: true,
+                  size: 20, // 10pt
+                  font: "Arial",
+                  color: "0F172A"
+                })
+              ]
+            }),
+            new Paragraph({ children: [new TextRun({ text: "", size: 8 })] })
+          );
+
+          // Buat Tabel Metadata Transkrip Wawancara (2 Kolom Terstruktur & Rapi)
+          const metaBorders = {
+            top: { style: BorderStyle.SINGLE, size: 1, color: "CBD5E1" },
+            bottom: { style: BorderStyle.SINGLE, size: 1, color: "CBD5E1" },
+            left: { style: BorderStyle.SINGLE, size: 1, color: "CBD5E1" },
+            right: { style: BorderStyle.SINGLE, size: 1, color: "CBD5E1" }
+          };
+
+          const metaRowsData = [
+            { label: "Rujukan Logbook", value: `Catatan Lapangan No. ${logbookNo}`, isHighlight: true },
+            { label: "Nama Responden / Informan", value: namaResponden, isBoldVal: true },
+            { label: "Jenis Kegiatan", value: jenisKegiatan },
+            { label: "Hari, Tanggal & Waktu", value: `${tgl} (${waktu})` },
+            { label: "Lokasi Penelitian", value: lokasi },
+            { label: "Uraian / Deskripsi Kegiatan", value: deskripsi },
+            { label: "Output / Capaian Kegiatan", value: output }
+          ];
+
+          const metaTableRows = metaRowsData.map(item => {
+            return new TableRow({
+              children: [
+                new TableCell({
+                  width: { size: 26, type: WidthType.PERCENTAGE },
+                  shading: { type: ShadingType.CLEAR, fill: "F8FAFC" },
+                  borders: metaBorders,
+                  children: [
+                    new Paragraph({
+                      spacing: { before: 40, after: 40 },
+                      children: [
+                        new TextRun({
+                          text: item.label,
+                          bold: true,
+                          size: 16, // 8pt
+                          color: "334155",
+                          font: "Arial"
+                        })
+                      ]
+                    })
+                  ]
+                }),
+                new TableCell({
+                  width: { size: 74, type: WidthType.PERCENTAGE },
+                  shading: { type: ShadingType.CLEAR, fill: item.isHighlight ? "F0FDF4" : "FFFFFF" },
+                  borders: metaBorders,
+                  children: [
+                    new Paragraph({
+                      spacing: { before: 40, after: 40 },
+                      children: [
+                        new TextRun({
+                          text: item.value || "-",
+                          bold: item.isHighlight || item.isBoldVal,
+                          size: 16, // 8pt
+                          color: item.isHighlight ? "064E3B" : "0F172A",
+                          font: "Arial"
+                        })
+                      ]
+                    })
+                  ]
+                })
+              ]
+            });
+          });
+
+          const metaTable = new Table({
+            width: { size: 100, type: WidthType.PERCENTAGE },
+            rows: metaTableRows
+          });
+
+          transcriptParagraphs.push(metaTable);
+          transcriptParagraphs.push(new Paragraph({ children: [new TextRun({ text: "", size: 10 })] }));
+
+          const transcriptItems = this.getUniqueTranscripts(entry);
+
+          transcriptItems.forEach(tItem => {
+            if (transcriptItems.length > 1) {
+              transcriptParagraphs.push(
+                new Paragraph({
+                  children: [
+                    new TextRun({ text: `[Berkas: ${tItem.fileName}]`, italics: true, bold: true, size: 15, font: "Arial", color: "475569" })
+                  ]
+                })
+              );
+            }
+
+            const pLines = tItem.text.split(/\n\s*\n|\r\n\s*\r\n/);
+            pLines.forEach(pText => {
+              if (pText.trim()) {
+                transcriptParagraphs.push(
+                  new Paragraph({
+                    indent: { left: 240, right: 240 },
+                    spacing: { line: 260, before: 40, after: 40 },
+                    children: [
+                      new TextRun({
+                        text: pText.trim(),
+                        size: 18,
+                        font: "Arial",
+                        color: "1E293B"
+                      })
+                    ]
+                  })
+                );
+              }
+            });
+            transcriptParagraphs.push(new Paragraph({ children: [new TextRun({ text: "", size: 14 })] }));
+          });
+
+          transcriptParagraphs.push(new Paragraph({ children: [new TextRun({ text: "", size: 24 })] }));
+        });
+      }
+    }
+
     // Rakit Dokumen Word Resmi
     const doc = new Document({
       sections: [
@@ -821,7 +1069,10 @@ const DocxExporter = {
             new Paragraph({ children: [new TextRun({ text: "", size: 24 })] }),
 
             // Tanda Tangan
-            ttdTable
+            ttdTable,
+
+            // Lampiran Transkrip Wawancara (Jika Dipilih)
+            ...transcriptParagraphs
           ]
         }
       ]
@@ -952,7 +1203,90 @@ const DocxExporter = {
               NIM. ${profile.nim}
             </td>
           </tr>
-        </table>
+        ${filterMeta.includeTranscript ? `
+          <div style="page-break-before: always; margin-top: 30px;">
+            <h2 style="text-align: center; color: #064e3b; margin-bottom: 4px; font-size: 15pt;">LAMPIRAN: TRANSKRIP REKAMAN WAWANCARA LAPANGAN</h2>
+            <p style="text-align: center; color: #64748b; font-style: italic; margin-top: 0; font-size: 10pt;">Hasil Transkripsi Otomatis Berbasis Kecerdasan Buatan (Groq Whisper Large v3)</p>
+            <hr style="border: none; border-top: 1px solid #cbd5e1; margin: 15px 0 25px 0;">
+            ${sortedEntries.filter(e => this.getUniqueTranscripts(e).length > 0).map((entry, idx) => {
+              const logbookNo = sortedEntries.indexOf(entry) + 1;
+              const tgl = this.formatDateIndo(entry.tanggal);
+              const waktu = this.formatTimeRange(
+                entry.waktuMulai || entry.jamMulai,
+                entry.waktuSelesai || entry.jamSelesai,
+                profile.timezone
+              );
+              const rawResponden = (
+                entry.sasaranResponden ||
+                entry.sasaranNarasumber ||
+                entry.narasumber ||
+                entry.pihakTerlibat ||
+                entry.informan ||
+                ""
+              ).trim();
+              const namaResponden = rawResponden || "Narasumber Lapangan";
+              const jenisKegiatan = (entry.jenisKegiatan || entry.kategori || "-").trim();
+              const lokasi = [
+                entry.dusun ? `Dusun ${entry.dusun}` : "",
+                entry.desa ? `Desa/Kel. ${entry.desa}` : "",
+                entry.kecamatan ? `Kec. ${entry.kecamatan}` : "",
+                entry.kabupaten ? `Kab. ${entry.kabupaten}` : ""
+              ].filter(Boolean).join(", ") || "-";
+              const deskripsi = (entry.deskripsi || entry.uraian || entry.aktivitas || "-").trim();
+              const output = (entry.output || entry.capaian || "-").trim();
+
+              const headingText = rawResponden
+                ? `Lampiran ${idx + 1}. Transkrip Wawancara: ${rawResponden} (Rujukan: Logbook No. ${logbookNo})`
+                : `Lampiran ${idx + 1}. Transkrip Rekaman Wawancara (Rujukan: Logbook No. ${logbookNo})`;
+
+              const transcriptTexts = this.getUniqueTranscripts(entry);
+
+              return `
+                <div style="margin-bottom: 30px; padding: 14px; background: #ffffff; border: 1px solid #cbd5e1; border-left: 5px solid #064e3b;">
+                  <h4 style="margin: 0 0 10px 0; color: #0f172a; font-size: 11pt;">${headingText}</h4>
+                  
+                  <table style="width: 100%; border-collapse: collapse; margin-bottom: 14px; font-size: 8.5pt; border: 1px solid #cbd5e1;">
+                    <tr>
+                      <td style="width: 26%; background: #f8fafc; font-weight: bold; color: #334155; padding: 5px 8px; border: 1px solid #cbd5e1;">Rujukan Logbook</td>
+                      <td style="width: 74%; background: #f0fdf4; font-weight: bold; color: #064e3b; padding: 5px 8px; border: 1px solid #cbd5e1;">Catatan Lapangan No. ${logbookNo}</td>
+                    </tr>
+                    <tr>
+                      <td style="background: #f8fafc; font-weight: bold; color: #334155; padding: 5px 8px; border: 1px solid #cbd5e1;">Nama Responden / Informan</td>
+                      <td style="background: #ffffff; font-weight: bold; color: #0f172a; padding: 5px 8px; border: 1px solid #cbd5e1;">${namaResponden}</td>
+                    </tr>
+                    <tr>
+                      <td style="background: #f8fafc; font-weight: bold; color: #334155; padding: 5px 8px; border: 1px solid #cbd5e1;">Jenis Kegiatan</td>
+                      <td style="background: #ffffff; color: #0f172a; padding: 5px 8px; border: 1px solid #cbd5e1;">${jenisKegiatan}</td>
+                    </tr>
+                    <tr>
+                      <td style="background: #f8fafc; font-weight: bold; color: #334155; padding: 5px 8px; border: 1px solid #cbd5e1;">Hari, Tanggal & Waktu</td>
+                      <td style="background: #ffffff; color: #0f172a; padding: 5px 8px; border: 1px solid #cbd5e1;">${tgl} (${waktu})</td>
+                    </tr>
+                    <tr>
+                      <td style="background: #f8fafc; font-weight: bold; color: #334155; padding: 5px 8px; border: 1px solid #cbd5e1;">Lokasi Penelitian</td>
+                      <td style="background: #ffffff; color: #0f172a; padding: 5px 8px; border: 1px solid #cbd5e1;">${lokasi}</td>
+                    </tr>
+                    <tr>
+                      <td style="background: #f8fafc; font-weight: bold; color: #334155; padding: 5px 8px; border: 1px solid #cbd5e1;">Uraian / Deskripsi Kegiatan</td>
+                      <td style="background: #ffffff; color: #0f172a; padding: 5px 8px; border: 1px solid #cbd5e1;">${deskripsi}</td>
+                    </tr>
+                    <tr>
+                      <td style="background: #f8fafc; font-weight: bold; color: #334155; padding: 5px 8px; border: 1px solid #cbd5e1;">Output / Capaian Kegiatan</td>
+                      <td style="background: #ffffff; color: #0f172a; padding: 5px 8px; border: 1px solid #cbd5e1;">${output}</td>
+                    </tr>
+                  </table>
+
+                  ${transcriptTexts.map(t => `
+                    <div style="margin-top: 10px;">
+                      ${transcriptTexts.length > 1 ? `<div style="font-size: 8.5pt; font-weight: bold; color: #64748b; margin-bottom: 4px;">[Berkas Audio: ${t.fileName}]</div>` : ''}
+                      <p style="font-size: 9.5pt; line-height: 1.6; color: #1e293b; white-space: pre-wrap; margin: 4px 0; padding: 8px 12px; background: #fafafa; border-radius: 4px;">${t.text}</p>
+                    </div>
+                  `).join('')}
+                </div>
+              `;
+            }).join('')}
+          </div>
+        ` : ''}
       </body>
       </html>
     `;

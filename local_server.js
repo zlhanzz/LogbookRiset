@@ -203,6 +203,118 @@ const server = http.createServer(async (req, res) => {
     }
   }
 
+  // Endpoint API /api/transcribe: Transkripsi audio wawancara via Groq Whisper Large v3
+  if (urlPath === '/api/transcribe' && req.method === 'POST') {
+    const env = loadEnv();
+    const apiKey = env.GROQ_API_KEY || process.env.GROQ_API_KEY;
+
+    if (!apiKey) {
+      return sendJson(res, 500, {
+        success: false,
+        message: 'GROQ_API_KEY belum dikonfigurasi di berkas .env'
+      });
+    }
+
+    try {
+      let audioBuffer = null;
+      let fileName = 'wawancara.m4a';
+      let mimeType = 'audio/mp4';
+
+      const contentType = req.headers['content-type'] || '';
+      if (contentType.startsWith('audio/')) {
+        // Mode Binary Audio Stream (misal dikirim oleh Web Audio downsampler browser)
+        const chunks = [];
+        for await (const chunk of req) {
+          chunks.push(chunk);
+        }
+        audioBuffer = Buffer.concat(chunks);
+        fileName = parsedUrl.searchParams.get('file_name') || 'audio_chunk.wav';
+        mimeType = contentType;
+      } else {
+        // Mode JSON dengan file_id Google Drive
+        const body = await readBody(req);
+        const fileId = body.file_id || body.fileId || parsedUrl.searchParams.get('file_id') || parsedUrl.searchParams.get('fileId');
+
+        if (!fileId) {
+          return sendJson(res, 400, {
+            success: false,
+            message: 'Parameter file_id wajib disertakan.'
+          });
+        }
+
+        // Ambil stream dari Google Drive
+        const { GoogleDriveMediaService } = require('./services/driveService');
+        const driveService = new GoogleDriveMediaService({
+          clientId: env.GOOGLE_DRIVE_CLIENT_ID || process.env.GOOGLE_DRIVE_CLIENT_ID,
+          clientSecret: env.GOOGLE_DRIVE_CLIENT_SECRET || process.env.GOOGLE_DRIVE_CLIENT_SECRET,
+          refreshToken: env.GOOGLE_DRIVE_REFRESH_TOKEN || process.env.GOOGLE_DRIVE_REFRESH_TOKEN,
+          redirectUri: env.GOOGLE_DRIVE_REDIRECT_URI || process.env.GOOGLE_DRIVE_REDIRECT_URI,
+          credentialsPath: env.GOOGLE_APPLICATION_CREDENTIALS || process.env.GOOGLE_APPLICATION_CREDENTIALS,
+          parentFolderId: env.GOOGLE_DRIVE_PARENT_FOLDER_ID || process.env.GOOGLE_DRIVE_PARENT_FOLDER_ID
+        });
+
+        const media = await driveService.getMediaStream(fileId);
+
+        // Kumpulkan chunk audio stream menjadi Buffer
+        const chunks = [];
+        for await (const chunk of media.stream) {
+          chunks.push(chunk);
+        }
+        audioBuffer = Buffer.concat(chunks);
+        fileName = body.file_name || media.name || 'wawancara.m4a';
+        mimeType = media.mimeType || 'audio/mp4';
+      }
+
+      const MAX_SIZE_BYTES = 25 * 1024 * 1024;
+      if (audioBuffer.length > MAX_SIZE_BYTES) {
+        return sendJson(res, 413, {
+          success: false,
+          requires_client_chunking: true,
+          message: `Ukuran berkas (${(audioBuffer.length / 1024 / 1024).toFixed(1)} MB) melebihi batas 25 MB Groq AI. Sistem akan memproses dan mengompresi audio melalui peramban...`
+        });
+      }
+
+      const fileBlob = new Blob([audioBuffer], { type: mimeType });
+      const formData = new FormData();
+      formData.append('model', 'whisper-large-v3');
+      formData.append('language', 'id');
+      formData.append('response_format', 'verbose_json');
+      formData.append('temperature', '0.2');
+      formData.append('file', fileBlob, fileName);
+
+      const groqRes = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`
+        },
+        body: formData
+      });
+
+      if (!groqRes.ok) {
+        const errText = await groqRes.text();
+        return sendJson(res, groqRes.status, {
+          success: false,
+          message: `Groq Whisper API Error (${groqRes.status}): ${errText}`
+        });
+      }
+
+      const groqData = await groqRes.json();
+      return sendJson(res, 200, {
+        success: true,
+        text: (groqData.text || '').trim(),
+        segments: groqData.segments || [],
+        duration: groqData.duration || 0,
+        language: groqData.language || 'id'
+      });
+    } catch (err) {
+      console.error('Error proses transkrip di local_server:', err);
+      return sendJson(res, 500, {
+        success: false,
+        message: 'Gagal memproses transkrip: ' + err.message
+      });
+    }
+  }
+
   // Endpoint API /api/media/upload: Mengunggah rekaman suara / video wawancara ke Google Drive 5 TB
   if (urlPath === '/api/media/upload' && req.method === 'POST') {
     const env = loadEnv();

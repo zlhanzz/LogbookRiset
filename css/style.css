@@ -8465,3 +8465,146 @@ textarea.form-control {
     max-width: 100%;
   }
 }
+
+/* ==========================================================================
+   AUTO-TRANSKRIP WAWANCARA (GROQ WHISPER LARGE V3)
+   ========================================================================== */
+.media-transcript-block {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed #e2e8f0;
+}
+
+.transcript-action-bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.btn-transcript-start,
+.btn-transcript-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-transcript-start {
+  background: #064e3b;
+  color: #ffffff;
+  border: 1px solid #064e3b;
+}
+
+.btn-transcript-start:hover {
+  background: #047857;
+}
+
+.btn-transcript-start:disabled {
+  background: #94a3b8;
+  border-color: #94a3b8;
+  color: #f8fafc;
+  cursor: not-allowed;
+}
+
+.btn-transcript-toggle {
+  background: #f1f5f9;
+  color: #0f172a;
+  border: 1px solid #cbd5e1;
+}
+
+.btn-transcript-toggle:hover {
+  background: #e2e8f0;
+}
+
+.transcript-badge-ready {
+  background: #dcfce7;
+  color: #166534;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.transcript-content-box {
+  margin-top: 8px;
+  padding: 12px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+}
+
+.transcript-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.transcript-title {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #334155;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.transcript-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.btn-copy-transcript,
+.btn-close-transcript {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #334155;
+  padding: 3px 8px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.btn-copy-transcript:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.btn-close-transcript:hover {
+  background: #fee2e2;
+  color: #991b1b;
+  border-color: #fca5a5;
+}
+
+.transcript-text {
+  font-size: 0.85rem;
+  line-height: 1.6;
+  color: #1e293b;
+  max-height: 220px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  padding: 8px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  outline: none;
+}
+
+.transcript-text:focus {
+  border-color: #064e3b;
+  box-shadow: 0 0 0 1px #064e3b;
+}
+
+.transcript-hint {
+  font-size: 0.7rem;
+  color: #64748b;
+  margin-top: 6px;
+  font-style: italic;
+}
