@@ -21,7 +21,7 @@ export async function onRequestPost(context) {
 
   const slug = (env && env.PAKASIR_SLUG) || 'logbook-otomatis';
   const apiKey = (env && env.PAKASIR_API_KEY) || 'GkLiMGVm8xvz4yB528ANrygljI6K4pHi';
-  const defaultAmount = parseInt((env && env.PAKASIR_AMOUNT) || '55500', 10);
+  const defaultAmount = parseInt((env && env.PAKASIR_AMOUNT) || '50000', 10);
 
   if (!apiKey) {
     return new Response(JSON.stringify({

@@ -109,7 +109,7 @@ const server = http.createServer(async (req, res) => {
       appId: env.FIREBASE_APP_ID || process.env.FIREBASE_APP_ID || '',
       measurementId: env.FIREBASE_MEASUREMENT_ID || process.env.FIREBASE_MEASUREMENT_ID || '',
       pakasirSlug: env.PAKASIR_SLUG || 'logbook-otomatis',
-      pakasirAmount: parseInt(env.PAKASIR_AMOUNT || '55500', 10)
+      pakasirAmount: parseInt(env.PAKASIR_AMOUNT || '50000', 10)
     };
 
     return sendJson(res, 200, config);
@@ -270,7 +270,7 @@ const server = http.createServer(async (req, res) => {
         return sendJson(res, 413, {
           success: false,
           requires_client_chunking: true,
-          message: `Ukuran berkas (${(audioBuffer.length / 1024 / 1024).toFixed(1)} MB) melebihi batas 25 MB Groq AI. Sistem akan memproses dan mengompresi audio melalui peramban...`
+          message: `Ukuran berkas (${(audioBuffer.length / 1024 / 1024).toFixed(1)} MB) melebihi batas pemrosesan langsung (25 MB). Sistem akan mengoptimalkan audio melalui peramban...`
         });
       }
 
@@ -294,7 +294,7 @@ const server = http.createServer(async (req, res) => {
         const errText = await groqRes.text();
         return sendJson(res, groqRes.status, {
           success: false,
-          message: `Groq Whisper API Error (${groqRes.status}): ${errText}`
+          message: `Layanan Transkripsi AI mengalami kendala (${groqRes.status})`
         });
       }
 
@@ -364,7 +364,7 @@ const server = http.createServer(async (req, res) => {
 
         return sendJson(res, 200, {
           success: true,
-          message: 'Media wawancara berhasil diunggah ke Google Drive 5 TB',
+          message: 'Media wawancara berhasil disimpan ke penyimpanan cloud terenkripsi',
           data: mediaMetadata
         });
       }
@@ -407,7 +407,7 @@ const server = http.createServer(async (req, res) => {
 
         return sendJson(res, 200, {
           success: true,
-          message: 'Media wawancara berhasil diunggah langsung ke Google Drive 5 TB',
+          message: 'Media wawancara berhasil disimpan ke penyimpanan cloud terenkripsi',
           data: mediaMetadata
         });
       } catch (driveErr) {
@@ -432,7 +432,7 @@ const server = http.createServer(async (req, res) => {
     const slug = env.PAKASIR_SLUG || 'logbook-otomatis';
     const apiKey = env.PAKASIR_API_KEY || '';
     const orderId = body.order_id || `LB-${Date.now()}`;
-    const amount = parseInt(body.amount || env.PAKASIR_AMOUNT || '55500', 10);
+    const amount = parseInt(body.amount || env.PAKASIR_AMOUNT || '50000', 10);
     const method = body.method || 'qris';
 
     if (!apiKey) {
@@ -565,7 +565,7 @@ const server = http.createServer(async (req, res) => {
     const slug = env.PAKASIR_SLUG || 'logbook-otomatis';
     const apiKey = env.PAKASIR_API_KEY || '';
     const orderId = body.order_id || '';
-    const amount = parseInt(body.amount || env.PAKASIR_AMOUNT || '55500', 10);
+    const amount = parseInt(body.amount || env.PAKASIR_AMOUNT || '50000', 10);
 
     if (!orderId) {
       return sendJson(res, 400, { success: false, message: 'order_id wajib diisi untuk simulasi' });

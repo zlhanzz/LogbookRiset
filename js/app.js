@@ -604,9 +604,9 @@
     const completedDate = (order && order.completedAt) ? new Date(order.completedAt) : new Date();
 
     const validUntil = new Date(completedDate);
-    validUntil.setDate(validUntil.getDate() + 90);
+    validUntil.setDate(validUntil.getDate() + 30);
 
-    const totalAmount = (order && (order.totalPayment || order.amount)) || 55500;
+    const totalAmount = (order && (order.totalPayment || order.amount)) || 50000;
 
     const dateFormatter = new Intl.DateTimeFormat("id-ID", {
       day: "numeric",
@@ -626,19 +626,18 @@
     if (DOM.receiptPaymentMethodText) DOM.receiptPaymentMethodText.textContent = methodName;
     if (DOM.receiptTimestampText) DOM.receiptTimestampText.textContent = dateFormatter.format(completedDate);
     if (DOM.receiptUserEmailText) DOM.receiptUserEmailText.textContent = (user && user.email) || "-";
-    if (DOM.receiptValidUntilText) DOM.receiptValidUntilText.textContent = `90 Hari Kalender (hingga ${expiryFormatter.format(validUntil)})`;
+    if (DOM.receiptValidUntilText) DOM.receiptValidUntilText.textContent = `30 Hari Kalender (hingga ${expiryFormatter.format(validUntil)})`;
     if (DOM.receiptTotalAmountText) DOM.receiptTotalAmountText.textContent = formatRupiah(totalAmount);
   }
 
   function updateCheckoutSummaryDisplay() {
     const order = state.currentPaymentOrder;
     const baseAmount = 50000;
-    const ppnAmount = 5500;
-    const total = (order && order.totalPayment) ? order.totalPayment : (baseAmount + ppnAmount);
+    const total = (order && order.totalPayment) ? order.totalPayment : baseAmount;
 
     if (DOM.checkoutSubtotalText) DOM.checkoutSubtotalText.textContent = formatRupiah(baseAmount);
-    if (DOM.checkoutFeeLabel) DOM.checkoutFeeLabel.textContent = "PPN (11%)";
-    if (DOM.checkoutFeeText) DOM.checkoutFeeText.textContent = formatRupiah(ppnAmount);
+    if (DOM.checkoutFeeLabel) DOM.checkoutFeeLabel.textContent = "Biaya Layanan";
+    if (DOM.checkoutFeeText) DOM.checkoutFeeText.textContent = "Bebas Biaya (Rp 0)";
     if (DOM.checkoutGrandTotalText) DOM.checkoutGrandTotalText.textContent = formatRupiah(total);
   }
 
@@ -729,8 +728,12 @@
       DOM.btnSubscriptionBadge.className = "badge-plan pro";
       DOM.planBadgeText.textContent = `Aktif (${remainingDays} hari)`;
     } else {
-      DOM.btnSubscriptionBadge.className = "badge-plan free";
-      DOM.planBadgeText.textContent = "Aktivasi Akses";
+      const limit = (window.AuthManager && AuthManager.MAX_TRIAL_LOGBOOKS) || 5;
+      const remaining = window.AuthManager && typeof AuthManager.getRemainingTrialQuota === "function"
+        ? AuthManager.getRemainingTrialQuota()
+        : limit;
+      DOM.btnSubscriptionBadge.className = "badge-plan free trial";
+      DOM.planBadgeText.textContent = `Trial (${remaining}/${limit}) Upgrade`;
     }
   }
 
@@ -876,8 +879,13 @@
       fetched = [...AuthManager.INITIAL_DUMMY_LOGBOOKS];
     }
 
+    // Jika pengguna sudah menghapus data contoh secara permanen, bersihkan sisa data dummy jika masih ada di cache
+    if (isDismissed && fetched.length > 0 && fetched.every(e => e.isDummy === true)) {
+      fetched = [];
+    }
+
     // Jika data yang dimuat dari cache lokal masih merupakan data dummy lama (Luwu/Wajo tanpa foto), mutakhirkan ke data dummy baru
-    if (fetched.length > 0 && fetched.every(e => e.isDummy === true)) {
+    if (!isDismissed && fetched.length > 0 && fetched.every(e => e.isDummy === true)) {
       const hasOldDummy = fetched.some(e => e.kabupaten === "Luwu" || e.kabupaten === "Wajo" || !e.fotoUrl);
       if (hasOldDummy && Array.isArray(AuthManager.INITIAL_DUMMY_LOGBOOKS)) {
         fetched = [...AuthManager.INITIAL_DUMMY_LOGBOOKS];
@@ -987,9 +995,8 @@
       DOM.dummyDataNoticeBar.classList.toggle("hidden", !hasDummy);
     }
     if (DOM.btnDeleteDummyData) {
-      // Tombol hapus data sampel hanya muncul bila pengguna sudah berlangganan
-      const isSub = window.AuthManager && AuthManager.isSubscribed();
-      DOM.btnDeleteDummyData.classList.toggle("hidden", !(hasDummy && isSub));
+      // Tombol hapus data sampel selalu ditampilkan selama masih ada data contoh bawaan (termasuk mode trial)
+      DOM.btnDeleteDummyData.classList.toggle("hidden", !hasDummy);
     }
 
     // 2. Statistik
@@ -1396,9 +1403,9 @@
                 let tickerPct = Math.max(currentFilePct, fileTransferMaxPct);
                 this.updateWidgetState({
                   fileName: item.file.name,
-                  status: `${prefixLabel}Sinkronisasi Cloud Drive...`,
+                  status: `${prefixLabel}Sinkronisasi Penyimpanan Cloud...`,
                   percent: tickerPct,
-                  bytesText: `${formatBytes(item.file.size)} • Mengamankan ke Drive 5 TB`,
+                  bytesText: `${formatBytes(item.file.size)} • Mengamankan ke Cloud Terenkripsi`,
                   isCompleted: false,
                   isFailed: false,
                   phase: "syncing"
@@ -1409,9 +1416,9 @@
                     tickerPct = Math.min(fileCloudMaxPct, tickerPct + 2);
                     this.updateWidgetState({
                       fileName: item.file.name,
-                      status: `${prefixLabel}Sinkronisasi Cloud Drive...`,
+                      status: `${prefixLabel}Sinkronisasi Penyimpanan Cloud...`,
                       percent: tickerPct,
-                      bytesText: `${formatBytes(item.file.size)} • Mengamankan ke Drive 5 TB`,
+                      bytesText: `${formatBytes(item.file.size)} • Mengamankan ke Cloud Terenkripsi`,
                       isCompleted: false,
                       isFailed: false,
                       phase: "syncing"
@@ -1775,7 +1782,7 @@
                 ` : `
                   <button type="button" class="btn-transcript-start" id="btnTranscribe_${entry.id}_${mIdx}" onclick="triggerAutoTranscription('${entry.id}', ${mIdx}, '${escapeHtml(fileId)}', '${escapeHtml(m.file_name || "")}', ${Number(m.size || 0)})">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
-                    <span>Auto-Transkrip (Whisper AI)</span>
+                    <span>Auto-Transkrip (Berbasis AI)</span>
                   </button>
                 `}
               </div>
@@ -2024,7 +2031,7 @@
       }
     }
 
-    setBtnLoading("Mentranskrip via Whisper AI...");
+    setBtnLoading("Mentranskrip via AI...");
 
     try {
       let finalTranscript = "";
@@ -2078,7 +2085,7 @@
         }
         const arrayBuf = await streamRes.arrayBuffer();
 
-        setBtnLoading("Mengompresi ke 16.000 Hz Mono Whisper...");
+        setBtnLoading("Mengoptimalkan format audio untuk AI...");
         const chunks = await downsampleAndChunkAudio(arrayBuf, 600); // Potong per 10 menit (< 20 MB/chunk)
 
         const chunkTranscripts = [];
@@ -2357,57 +2364,57 @@
       "Buka aplikasi <strong>BRImo</strong> atau kunjungi ATM BRI terdekat.",
       "Pilih menu <strong>Pembayaran / Transfer</strong> &rarr; <strong>Virtual Account (BRIVA)</strong>.",
       "Masukkan nomor Virtual Account BRI yang tertera di atas.",
-      "Periksa nama penerima dan nominal transaksi (Rp 55.500).",
+      "Periksa nama penerima dan nominal transaksi (Rp 50.000).",
       "Konfirmasi dengan PIN BRImo/ATM dan simpan bukti transaksi."
     ],
     bni_va: [
       "Buka aplikasi <strong>BNI Mobile Banking</strong> atau kunjungi ATM BNI.",
       "Pilih menu <strong>Transfer</strong> &rarr; <strong>Virtual Account Billing</strong>.",
       "Masukkan nomor Virtual Account BNI yang tertera di atas.",
-      "Pastikan tagihan dan detail pembayaran telah sesuai (Rp 55.500).",
+      "Pastikan tagihan dan detail pembayaran telah sesuai (Rp 50.000).",
       "Masukkan Password Transaksi dan selesaikan pembayaran."
     ],
     atm_bersama_va: [
       "Gunakan Mobile Banking atau ATM dari bank mana pun berlogo <strong>ATM Bersama / PRIMA / ALTO</strong>.",
       "Pilih menu <strong>Transfer Antar Bank</strong> lalu masukkan kode bank dan nomor VA di atas.",
-      "Pastikan nominal transfer sesuai persis dengan total tagihan (Rp 55.500).",
+      "Pastikan nominal transfer sesuai persis dengan total tagihan (Rp 50.000).",
       "Konfirmasi transaksi dan simpan tanda terima pembayaran."
     ],
     bnc_va: [
       "Buka aplikasi <strong>Neobank (Bank Neo Commerce)</strong> atau m-banking lain.",
       "Pilih menu <strong>Transfer / Pembayaran VA</strong>.",
       "Masukkan nomor Virtual Account BNC yang tertera di atas.",
-      "Periksa nominal (Rp 55.500) dan konfirmasi pembayaran."
+      "Periksa nominal (Rp 50.000) dan konfirmasi pembayaran."
     ],
     cimb_niaga_va: [
       "Buka aplikasi <strong>OCTO Mobile</strong> atau ATM CIMB Niaga.",
       "Pilih menu <strong>Transfer</strong> &rarr; <strong>Rekening Ponsel / Virtual Account</strong>.",
       "Masukkan nomor Virtual Account CIMB Niaga di atas.",
-      "Pastikan jumlah tagihan (Rp 55.500) sesuai dan masukkan PIN OCTO Mobile."
+      "Pastikan jumlah tagihan (Rp 50.000) sesuai dan masukkan PIN OCTO Mobile."
     ],
     maybank_va: [
       "Buka aplikasi <strong>M2U ID App</strong> atau kunjungi ATM Maybank.",
       "Pilih menu <strong>Transfer</strong> &rarr; <strong>Virtual Account</strong>.",
       "Masukkan nomor Virtual Account Maybank yang tertera di atas.",
-      "Konfirmasi nominal tagihan (Rp 55.500) dan selesaikan transaksi."
+      "Konfirmasi nominal tagihan (Rp 50.000) dan selesaikan transaksi."
     ],
     permata_va: [
       "Buka aplikasi <strong>PermataMobile X</strong> atau ATM Bank Permata.",
       "Pilih menu <strong>Pembayaran</strong> &rarr; <strong>Virtual Account</strong>.",
       "Masukkan nomor Virtual Account Permata yang tertera di atas.",
-      "Periksa rincian tagihan (Rp 55.500) dan konfirmasi transfer."
+      "Periksa rincian tagihan (Rp 50.000) dan konfirmasi transfer."
     ],
     artha_graha_va: [
       "Buka aplikasi <strong>Agi Mobile</strong> atau ATM Bank Artha Graha.",
       "Pilih menu <strong>Pembayaran / Virtual Account</strong>.",
       "Masukkan nomor Virtual Account Artha Graha di atas.",
-      "Pastikan nominal tagihan (Rp 55.500) telah sesuai dan selesaikan transaksi."
+      "Pastikan nominal tagihan (Rp 50.000) telah sesuai dan selesaikan transaksi."
     ],
     sampoerna_va: [
       "Buka aplikasi <strong>Sampoerna Mobile Banking</strong> atau transfer antar bank.",
       "Pilih menu <strong>Virtual Account / Transfer</strong>.",
       "Masukkan nomor Virtual Account Bank Sahabat Sampoerna di atas.",
-      "Pastikan nominal tagihan (Rp 55.500) telah sesuai dan selesaikan transaksi."
+      "Pastikan nominal tagihan (Rp 50.000) telah sesuai dan selesaikan transaksi."
     ]
   };
 
@@ -2499,7 +2506,7 @@
             userId: user.uid,
             email: user.email,
             name: user.displayName || user.email.split("@")[0],
-            amount: 55500,
+            amount: 50000,
             method: "payment_link"
           })
         });
@@ -2522,8 +2529,8 @@
           orderId,
           txnId,
           amount: 50000,
-          fee: 5500,
-          totalPayment: 55500,
+          fee: 0,
+          totalPayment: 50000,
           paymentUrl,
           method: "payment_link"
         };
@@ -2542,11 +2549,11 @@
                 userId: user.uid,
                 userEmail: user.email,
                 userName: user.displayName || user.email.split("@")[0],
-                packageTitle: "Akses Sistem Logbook Riset (90 Hari)",
-                durationDays: 90,
+                packageTitle: "Akses Sistem Logbook Riset (30 Hari)",
+                durationDays: 30,
                 amount: 50000,
-                fee: 5500,
-                totalPayment: 55500,
+                fee: 0,
+                totalPayment: 50000,
                 paymentMethod: "payment_link",
                 paymentGateway: "pakasir",
                 status: "pending",
@@ -2572,9 +2579,9 @@
         if (DOM.vaOrderIdText) DOM.vaOrderIdText.textContent = `Order #${orderId}`;
         if (DOM.vaNumberDisplay) DOM.vaNumberDisplay.textContent = "Buka di Browser";
         if (DOM.vaBaseAmount) DOM.vaBaseAmount.textContent = formatRupiah(50000);
-        if (DOM.vaFeeLabel) DOM.vaFeeLabel.textContent = "PPN (11%)";
-        if (DOM.vaFeeAmount) DOM.vaFeeAmount.textContent = formatRupiah(5500);
-        if (DOM.vaTotalAmount) DOM.vaTotalAmount.textContent = formatRupiah(55500);
+        if (DOM.vaFeeLabel) DOM.vaFeeLabel.textContent = "Biaya Layanan";
+        if (DOM.vaFeeAmount) DOM.vaFeeAmount.textContent = "Bebas Biaya (Rp 0)";
+        if (DOM.vaTotalAmount) DOM.vaTotalAmount.textContent = formatRupiah(50000);
 
         updateCheckoutSummaryDisplay();
       } catch (e) {
@@ -2618,7 +2625,7 @@
           userId: user.uid,
           email: user.email,
           name: user.displayName || user.email.split("@")[0],
-          amount: 55500,
+          amount: 50000,
           method: method
         })
       });
@@ -2636,8 +2643,8 @@
       const orderId = data.order_id || (data.data && data.data.order_id) || data.orderId || `LB-${Date.now()}`;
       const txnId = data.txn_id || (data.data && data.data.txn_id) || "";
       const baseAmount = 50000;
-      const ppnAmount = 5500;
-      const totalPayment = 55500;
+      const feeAmount = 0;
+      const totalPayment = 50000;
       const isSandbox = Boolean(data.is_sandbox !== undefined ? data.is_sandbox : (data.data && data.data.is_sandbox));
       const qrString = data.qr_string || (data.data && (data.data.qr_string || data.data.qris_string)) || "";
       const vaNumber = data.va_number || (data.data && data.data.va_number) || "";
@@ -2650,7 +2657,7 @@
         txnId,
         method,
         amount: baseAmount,
-        fee: ppnAmount,
+        fee: feeAmount,
         totalPayment,
         isSandbox,
         qrString,
@@ -2672,10 +2679,10 @@
               userId: user.uid,
               userEmail: user.email,
               userName: user.displayName || user.email.split("@")[0],
-              packageTitle: "Akses Sistem Logbook Riset (90 Hari)",
-              durationDays: 90,
+              packageTitle: "Akses Sistem Logbook Riset (30 Hari)",
+              durationDays: 30,
               amount: baseAmount,
-              fee: ppnAmount,
+              fee: feeAmount,
               totalPayment,
               paymentMethod: method,
               paymentGateway: "pakasir",
@@ -2695,8 +2702,8 @@
       if (method === "qris") {
         if (DOM.qrisOrderIdText) DOM.qrisOrderIdText.textContent = `Order #${orderId}`;
         if (DOM.qrisBaseAmount) DOM.qrisBaseAmount.textContent = formatRupiah(baseAmount);
-        if (DOM.qrisFeeLabel) DOM.qrisFeeLabel.textContent = "PPN (11%)";
-        if (DOM.qrisFeeAmount) DOM.qrisFeeAmount.textContent = formatRupiah(ppnAmount);
+        if (DOM.qrisFeeLabel) DOM.qrisFeeLabel.textContent = "Biaya Layanan";
+        if (DOM.qrisFeeAmount) DOM.qrisFeeAmount.textContent = "Bebas Biaya (Rp 0)";
         if (DOM.qrisFeeRow) DOM.qrisFeeRow.classList.remove("hidden");
         if (DOM.qrisTotalAmount) DOM.qrisTotalAmount.textContent = formatRupiah(totalPayment);
 
@@ -2719,8 +2726,8 @@
         if (DOM.vaOrderIdText) DOM.vaOrderIdText.textContent = `Order #${orderId}`;
         if (DOM.vaNumberDisplay) DOM.vaNumberDisplay.textContent = vaNumber || "Menunggu Nomor...";
         if (DOM.vaBaseAmount) DOM.vaBaseAmount.textContent = formatRupiah(baseAmount);
-        if (DOM.vaFeeLabel) DOM.vaFeeLabel.textContent = "PPN (11%)";
-        if (DOM.vaFeeAmount) DOM.vaFeeAmount.textContent = formatRupiah(ppnAmount);
+        if (DOM.vaFeeLabel) DOM.vaFeeLabel.textContent = "Biaya Layanan";
+        if (DOM.vaFeeAmount) DOM.vaFeeAmount.textContent = "Bebas Biaya (Rp 0)";
         if (DOM.vaFeeRow) DOM.vaFeeRow.classList.remove("hidden");
         if (DOM.vaTotalAmount) DOM.vaTotalAmount.textContent = formatRupiah(totalPayment);
 
@@ -2802,7 +2809,7 @@
           userEmail: (activeUser && activeUser.email) || (state.currentPaymentOrder && state.currentPaymentOrder.userEmail),
           completedAt: new Date()
         };
-        await AuthManager.activateSubscription(state.currentPaymentOrder.orderId, state.currentPaymentOrder.totalPayment || 55500, 90);
+        await AuthManager.activateSubscription(state.currentPaymentOrder.orderId, state.currentPaymentOrder.totalPayment || 50000, 30);
 
         // Update ledger transaksi pengguna di Cloud Firestore
         if (window.FirebaseService && FirebaseService.db && activeUser && state.currentPaymentOrder.orderId) {
@@ -2865,7 +2872,7 @@
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           order_id: state.currentPaymentOrder.orderId,
-          amount: state.currentPaymentOrder.totalPayment || state.currentPaymentOrder.amount || 55500
+          amount: state.currentPaymentOrder.totalPayment || state.currentPaymentOrder.amount || 50000
         })
       });
 
@@ -2896,7 +2903,7 @@
         userEmail: (activeUser && activeUser.email) || (state.currentPaymentOrder && state.currentPaymentOrder.userEmail),
         completedAt: new Date()
       };
-      await AuthManager.activateSubscription(state.currentPaymentOrder.orderId, 55500, 90);
+      await AuthManager.activateSubscription(state.currentPaymentOrder.orderId, 50000, 30);
 
       // Update status transaksi simulasi di Cloud Firestore
       if (window.FirebaseService && FirebaseService.db && activeUser && state.currentPaymentOrder.orderId) {
@@ -3558,6 +3565,14 @@
       }
 
       state.entries = state.entries.filter(e => e.id !== entryId);
+
+      // Jika yang dihapus adalah data contoh, dan tidak ada lagi data contoh yang tersisa, tandai dismissed permanen
+      if (user && !state.entries.some(e => e.isDummy === true)) {
+        if (window.AuthManager && AuthManager.setDummyDismissed) {
+          AuthManager.setDummyDismissed(user.uid, true);
+        }
+      }
+
       saveEntriesToLocalStorage(state.entries, user);
       updateDashboard();
       showToast("Catatan logbook berhasil dihapus permanen.", "success");

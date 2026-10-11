@@ -514,6 +514,20 @@ body {
   gap: 16px;
 }
 
+/* DASHBOARD FEED AREA & SECTION SPACING (CLEAN INDUSTRY STANDARD) */
+.dashboard-feed-area {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+}
+
+@media (min-width: 640px) {
+  .dashboard-feed-area {
+    gap: 18px;
+  }
+}
+
 /* STATS GRID */
 .stats-grid {
   display: grid;
@@ -579,11 +593,88 @@ body {
   color: var(--color-slate-900);
 }
 
-/* ACTION BUTTONS */
+/* ACTION BUTTONS (INDUSTRY STANDARD RESPONSIVE ACTION BAR) */
 .action-bar {
   display: flex;
-  gap: 10px;
+  gap: 12px;
   align-items: stretch;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0;
+}
+
+.action-bar .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 46px;
+  padding: 11px 16px;
+  border-radius: var(--radius-md, 8px);
+  font-size: 0.90rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  text-decoration: none;
+  touch-action: manipulation;
+  box-sizing: border-box;
+  min-width: 0;
+  line-height: 1.25;
+}
+
+.action-bar .btn svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.action-bar .btn span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.action-bar .btn-text-full {
+  display: inline;
+}
+
+.action-bar .btn-text-short {
+  display: none;
+}
+
+.action-bar .btn-add {
+  flex: 1.15 1 0%;
+  background: #064e3b;
+  border: 1px solid #047857;
+  color: #ffffff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.action-bar .btn-add:hover {
+  background: #047857;
+  border-color: #059669;
+}
+
+.action-bar .btn-add:active {
+  transform: translateY(1px);
+}
+
+.action-bar .btn-export {
+  flex: 1 1 0%;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #1e293b;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.action-bar .btn-export:hover {
+  background: #f8fafc;
+  border-color: #94a3b8;
+  color: #0f172a;
+}
+
+.action-bar .btn-export:active {
+  transform: translateY(1px);
 }
 
 .btn {
@@ -654,11 +745,15 @@ body {
 }
 
 .btn-add {
-  flex: 1.3;
+  flex: 1.15 1 0%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .btn-export {
-  flex: 1;
+  flex: 1 1 0%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 /* FILTER & SEARCH */
@@ -1203,22 +1298,26 @@ body {
 }
 
 @media (max-width: 640px) {
-  /* BARIS AKSI MOBILE (2 TOMBOL SEIMBANG 50/50 DENGAN TOUCH TARGET 44PX) */
+  /* BARIS AKSI MOBILE (2 TOMBOL SEIMBANG DENGAN TOUCH TARGET STANDAR INDUSTRI & ZERO OVERFLOW) */
   .action-bar {
     display: flex;
     gap: 8px;
     width: 100%;
+    box-sizing: border-box;
   }
 
   .action-bar .btn {
     flex: 1 1 0%;
+    min-width: 0;
     min-height: 44px;
-    padding: 10px 8px;
+    padding: 10px 8px !important;
     font-size: 0.84rem;
     font-weight: 700;
     border-radius: var(--radius-sm, 6px);
     justify-content: center;
     text-align: center;
+    box-sizing: border-box;
+    gap: 6px;
   }
 
   .action-bar .btn svg {
@@ -1480,6 +1579,44 @@ body {
     overflow: hidden;
   }
 }
+
+@media (max-width: 520px) {
+  /* RESPONSIVE ADAPTIVE LABELS (MENCEGAH TEKS TERPOTONG DI LAYAR SMARTPHONE) */
+  .action-bar .btn-text-full {
+    display: none !important;
+  }
+
+  .action-bar .btn-text-short {
+    display: inline !important;
+  }
+
+  .action-bar .btn {
+    padding: 10px 6px !important;
+    font-size: 0.82rem;
+  }
+}
+
+@media (max-width: 340px) {
+  /* FALLBACK ULTRA-NARROW DISPLAY */
+  .action-bar {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .action-bar .btn {
+    width: 100%;
+    min-width: 100%;
+  }
+
+  .action-bar .btn-text-full {
+    display: inline !important;
+  }
+
+  .action-bar .btn-text-short {
+    display: none !important;
+  }
+}
+
 
 
 /* EMPTY STATE */
@@ -7388,6 +7525,41 @@ textarea.form-control {
   background: #fef2f2;
   border: 1px solid #fecaca;
   color: #b91c1c;
+}
+
+.v3-mini-transcribe-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.62rem;
+  font-weight: 700;
+  padding: 3px 6px;
+  border-radius: 4px;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  color: #065f46;
+  box-shadow: 0 1px 2px rgba(6, 78, 59, 0.08);
+}
+
+.v3-fcard-transcribe-preview {
+  display: flex;
+  align-items: flex-start;
+  gap: 5px;
+  margin-top: 6px;
+  padding: 4px 6px;
+  background: #f8fafc;
+  border-left: 2px solid #059669;
+  border-radius: 3px;
+  font-size: 0.58rem;
+  font-style: italic;
+  color: #334155;
+  line-height: 1.35;
+  width: 100%;
+}
+
+.v3-fcard-transcribe-preview svg {
+  flex-shrink: 0;
+  margin-top: 2px;
 }
 
 .v3-phone-fab-btn {

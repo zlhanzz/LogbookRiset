@@ -828,7 +828,7 @@ const DocxExporter = {
             alignment: AlignmentType.CENTER,
             children: [
               new TextRun({
-                text: "Hasil Transkripsi Rekaman Otomatis Berbasis Kecerdasan Buatan (Groq Whisper Large v3)",
+                text: "Hasil Transkripsi Rekaman Otomatis Berbasis Kecerdasan Buatan (AI)",
                 italics: true,
                 size: 16,
                 font: "Arial",
@@ -1206,7 +1206,7 @@ const DocxExporter = {
         ${filterMeta.includeTranscript ? `
           <div style="page-break-before: always; margin-top: 30px;">
             <h2 style="text-align: center; color: #064e3b; margin-bottom: 4px; font-size: 15pt;">LAMPIRAN: TRANSKRIP REKAMAN WAWANCARA LAPANGAN</h2>
-            <p style="text-align: center; color: #64748b; font-style: italic; margin-top: 0; font-size: 10pt;">Hasil Transkripsi Otomatis Berbasis Kecerdasan Buatan (Groq Whisper Large v3)</p>
+            <p style="text-align: center; color: #64748b; font-style: italic; margin-top: 0; font-size: 10pt;">Hasil Transkripsi Otomatis Berbasis Kecerdasan Buatan (AI)</p>
             <hr style="border: none; border-top: 1px solid #cbd5e1; margin: 15px 0 25px 0;">
             ${sortedEntries.filter(e => this.getUniqueTranscripts(e).length > 0).map((entry, idx) => {
               const logbookNo = sortedEntries.indexOf(entry) + 1;

@@ -10,7 +10,7 @@ const AuthManager = {
   subscription: {
     status: "inactive",
     activeUntil: null,
-    amount: 55500,
+    amount: 50000,
     orderId: null
   },
   MAX_TRIAL_LOGBOOKS: 5,
@@ -33,7 +33,7 @@ const AuthManager = {
     return {
       status: "inactive",
       activeUntil: null,
-      amount: 55500,
+      amount: 50000,
       orderId: null
     };
   },
@@ -130,8 +130,12 @@ const AuthManager = {
 
   isDummyDismissed(uid) {
     if (!uid) return false;
+    if (this._dummyDismissedMap && typeof this._dummyDismissedMap[uid] === "boolean") {
+      return this._dummyDismissedMap[uid];
+    }
     try {
-      return localStorage.getItem(`${this.STORAGE_KEYS.DISMISSED_DUMMY}_${uid}`) === "true";
+      const val = localStorage.getItem(`${this.STORAGE_KEYS.DISMISSED_DUMMY}_${uid}`);
+      return val === "true";
     } catch (e) {
       return false;
     }
@@ -139,6 +143,9 @@ const AuthManager = {
 
   setDummyDismissed(uid, dismissed = true) {
     if (!uid) return;
+    if (!this._dummyDismissedMap) this._dummyDismissedMap = {};
+    this._dummyDismissedMap[uid] = Boolean(dismissed);
+
     try {
       if (dismissed) {
         localStorage.setItem(`${this.STORAGE_KEYS.DISMISSED_DUMMY}_${uid}`, "true");
@@ -146,6 +153,18 @@ const AuthManager = {
         localStorage.removeItem(`${this.STORAGE_KEYS.DISMISSED_DUMMY}_${uid}`);
       }
     } catch (e) {}
+
+    // Persistensi sinkronisasi Cloud Firestore jika database aktif
+    if (window.FirebaseService && FirebaseService.db) {
+      try {
+        FirebaseService.db.collection("users").doc(uid).set({
+          dummy_dismissed: Boolean(dismissed),
+          updatedAt: new Date().toISOString()
+        }, { merge: true }).catch(err => {
+          console.warn("Gagal simpan dummy_dismissed ke Firestore:", err);
+        });
+      } catch (err) {}
+    }
   },
 
   // 3 Catatan Logbook Contoh (Dummy Data) untuk Pratinjau Dashboard & Ekspor Word
@@ -307,7 +326,10 @@ const AuthManager = {
       const userRef = FirebaseService.db.collection("users").doc(uid);
       const userDoc = await userRef.get();
       if (userDoc.exists) {
-        const data = userDoc.data() || {};
+        // Sinkronisasi status data contoh dihapus permanen
+        if (typeof data.dummy_dismissed === "boolean") {
+          this.setDummyDismissed(uid, data.dummy_dismissed);
+        }
 
         // Sinkronisasi riwayat pembuatan kumulatif kuota trial
         if (typeof data.trial_created_count === "number") {
@@ -328,8 +350,8 @@ const AuthManager = {
             status: "active",
             plan: "pro",
             activatedAt: data.createdAt || new Date().toISOString(),
-            activeUntil: new Date(Date.now() + 90 * 86400000).toISOString(),
-            amount: 55500,
+            activeUntil: new Date(Date.now() + 30 * 86400000).toISOString(),
+            amount: 50000,
             orderId: "LEGACY-PRO"
           };
           await userRef.set({
@@ -382,7 +404,7 @@ const AuthManager = {
             plan: "free",
             activatedAt: null,
             activeUntil: null,
-            amount: 55500,
+            amount: 50000,
             orderId: null
           },
           hasPaid: false,
@@ -466,7 +488,7 @@ const AuthManager = {
   /**
    * Aktivasi langganan (dipanggil setelah pembayaran Pakasir sukses)
    */
-  async activateSubscription(orderId, amount = 55500, days = 90) {
+  async activateSubscription(orderId, amount = 50000, days = 30) {
     if (!this.currentUser || !this.currentUser.uid) {
       console.warn("activateSubscription dipanggil tanpa currentUser!");
       return null;
@@ -597,7 +619,7 @@ const AuthManager = {
               plan: "free",
               activatedAt: null,
               activeUntil: null,
-              amount: 55500,
+              amount: 50000,
               orderId: null
             },
             hasPaid: false,
