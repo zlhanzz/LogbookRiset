@@ -13,6 +13,11 @@ const AuthManager = {
     amount: 55500,
     orderId: null
   },
+  MAX_TRIAL_LOGBOOKS: 5,
+  trialUsage: {
+    createdCount: 0,
+    limit: 5
+  },
   onUserChangedCallbacks: [],
 
   STORAGE_KEYS: {
@@ -39,6 +44,80 @@ const AuthManager = {
   getSubscriptionStorageKey(uid) {
     if (!uid) return null;
     return `LOGBOOK_SUBSCRIPTION_V3_${uid}`;
+  },
+
+  getTrialStorageKey(uid) {
+    if (!uid) return null;
+    return `LOGBOOK_TRIAL_USAGE_V3_${uid}`;
+  },
+
+  getTrialCreatedCount() {
+    return Number(this.trialUsage?.createdCount || 0);
+  },
+
+  getRemainingTrialQuota() {
+    if (this.isSubscribed()) return Infinity;
+    const used = this.getTrialCreatedCount();
+    return Math.max(0, this.MAX_TRIAL_LOGBOOKS - used);
+  },
+
+  hasTrialQuota() {
+    if (this.isSubscribed()) return true;
+    return this.getRemainingTrialQuota() > 0;
+  },
+
+  canCreateLogbook() {
+    return this.isSubscribed() || this.hasTrialQuota();
+  },
+
+  loadTrialUsageFromCache(uid) {
+    if (!uid) {
+      this.trialUsage.createdCount = 0;
+      return;
+    }
+    try {
+      const key = this.getTrialStorageKey(uid);
+      const val = key ? localStorage.getItem(key) : null;
+      if (val !== null && !isNaN(Number(val))) {
+        this.trialUsage.createdCount = Math.max(0, parseInt(val, 10));
+      } else {
+        this.trialUsage.createdCount = 0;
+      }
+    } catch (e) {
+      this.trialUsage.createdCount = 0;
+    }
+  },
+
+  saveTrialUsageToCache(uid) {
+    if (!uid) return;
+    try {
+      const key = this.getTrialStorageKey(uid);
+      if (key) {
+        localStorage.setItem(key, String(this.getTrialCreatedCount()));
+      }
+    } catch (e) {}
+  },
+
+  async incrementTrialUsage(uid) {
+    if (!uid) return this.getTrialCreatedCount();
+    if (this.isSubscribed()) return Infinity;
+
+    const current = this.getTrialCreatedCount();
+    const nextVal = current + 1;
+    this.trialUsage.createdCount = nextVal;
+    this.saveTrialUsageToCache(uid);
+
+    if (window.FirebaseService && FirebaseService.db) {
+      try {
+        await FirebaseService.db.collection("users").doc(uid).set({
+          trial_created_count: nextVal,
+          updatedAt: new Date().toISOString()
+        }, { merge: true });
+      } catch (dbErr) {
+        console.warn("Gagal update trial_created_count di Firestore:", dbErr);
+      }
+    }
+    return nextVal;
   },
 
   clearSubscriptionCache(uid) {
@@ -157,12 +236,14 @@ const AuthManager = {
             };
             // Reset status langganan ke default sebelum memuat milik UID ini
             this.subscription = this.getDefaultSubscription();
+            this.trialUsage = { createdCount: 0, limit: this.MAX_TRIAL_LOGBOOKS };
             await this.syncUserDataFromFirestore(user.uid);
           } else {
             // Tamu / belum login: null
             this.currentUser = null;
             this.userProfile = null;
             this.subscription = this.getDefaultSubscription();
+            this.trialUsage = { createdCount: 0, limit: this.MAX_TRIAL_LOGBOOKS };
           }
 
           // Tandai status auth selesai dievaluasi pertama kali
@@ -181,6 +262,7 @@ const AuthManager = {
     // Jika Firebase belum aktif / offline
     this.currentUser = null;
     this.subscription = this.getDefaultSubscription();
+    this.trialUsage = { createdCount: 0, limit: this.MAX_TRIAL_LOGBOOKS };
     this.isAuthReady = true;
     if (this._resolveAuthReady) {
       this._resolveAuthReady(null);
@@ -212,11 +294,13 @@ const AuthManager = {
   async syncUserDataFromFirestore(uid) {
     if (!uid) {
       this.subscription = this.getDefaultSubscription();
+      this.trialUsage = { createdCount: 0, limit: this.MAX_TRIAL_LOGBOOKS };
       return;
     }
 
     // Muat cache lokal spesifik UID ini
     this.loadSubscriptionFromCache(uid);
+    this.loadTrialUsageFromCache(uid);
 
     if (!FirebaseService.db) return;
     try {
@@ -224,6 +308,19 @@ const AuthManager = {
       const userDoc = await userRef.get();
       if (userDoc.exists) {
         const data = userDoc.data() || {};
+
+        // Sinkronisasi riwayat pembuatan kumulatif kuota trial
+        if (typeof data.trial_created_count === "number") {
+          this.trialUsage.createdCount = Math.max(this.trialUsage.createdCount, data.trial_created_count);
+          this.saveTrialUsageToCache(uid);
+        } else if (!data.trial_created_count && !this.isSubscribed()) {
+          // Inisialisasi field kuota trial jika belum tercatat di Firestore
+          await userRef.set({
+            plan: "trial",
+            trial_created_count: this.trialUsage.createdCount || 0,
+            trial_quota_limit: this.MAX_TRIAL_LOGBOOKS
+          }, { merge: true });
+        }
 
         // Migrasi normalisasi schema jika ada akun legacy dengan plan 'pro' tanpa subscription map
         if ((!data.subscription || !data.subscription.status) && data.plan === "pro") {
@@ -258,7 +355,7 @@ const AuthManager = {
             this.saveSubscriptionToCache(uid);
           }
         } else {
-          // Akun belum berlangganan (Free Tier)
+          // Akun belum berlangganan (Free / Trial Tier)
           this.subscription = this.getDefaultSubscription();
           this.clearSubscriptionCache(uid);
         }
@@ -277,6 +374,9 @@ const AuthManager = {
           timezone: "WITA",
           locations: [],
           hasCompletedProfile: false,
+          plan: "trial",
+          trial_created_count: 0,
+          trial_quota_limit: this.MAX_TRIAL_LOGBOOKS,
           subscription: {
             status: "inactive",
             plan: "free",

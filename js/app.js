@@ -160,6 +160,8 @@
     btnOpenExportModal: document.getElementById("btnOpenExportModal"),
     btnRefreshSync: null,
 
+
+
     // Portal Checkout & Saluran Pembayaran (Route: /checkout)
     checkoutChannelSelection: document.getElementById("checkoutChannelSelection"),
     checkoutActivePaymentView: document.getElementById("checkoutActivePaymentView"),
@@ -727,7 +729,7 @@
       DOM.planBadgeText.textContent = `Aktif (${remainingDays} hari)`;
     } else {
       DOM.btnSubscriptionBadge.className = "badge-plan free";
-      DOM.planBadgeText.textContent = "Mode Uji Coba";
+      DOM.planBadgeText.textContent = "Aktivasi Akses";
     }
   }
 
@@ -975,6 +977,8 @@
 
   function updateDashboard() {
     const filtered = getFilteredEntries();
+
+    updateSubscriptionBadgeUI();
 
     // 1. Tampilkan / Sembunyikan Banner Dummy Data (Trial Notice)
     const hasDummy = state.entries.some(e => e.isDummy === true);
@@ -2566,10 +2570,10 @@
   // 5. MODAL FORM LOGBOOK: SMART CASCADING & LOKASI
   // ==========================================================================
   function openAddModal() {
-    // 1. Enforce Paywall: Harus Berlangganan
-    if (!window.AuthManager || !AuthManager.isSubscribed()) {
-      openPaywallModal();
-      showToast("Aktivasi akses riset (Rp 50.000 / 3 Bulan) untuk mulai mencatat logbook.", "info");
+    // 1. Cek Kelayakan Pembuatan Logbook (Silent Free Tier 5 Kesempatan Kumulatif)
+    if (!window.AuthManager || !AuthManager.canCreateLogbook()) {
+      navigateTo("/pricing");
+      showToast("Batas pencatatan logbook tercapai. Silakan aktifkan akses riset untuk melanjutkan.", "info");
       return;
     }
 
@@ -2636,8 +2640,9 @@
   }
 
   function openEditModal(entryId) {
-    if (!window.AuthManager || !AuthManager.isSubscribed()) {
-      openPaywallModal();
+    const user = window.AuthManager ? AuthManager.currentUser : null;
+    if (!user) {
+      navigateTo("/login");
       return;
     }
 
@@ -3090,6 +3095,14 @@
         showToast("Logbook berhasil diperbarui!", "success");
       } else {
         state.entries.unshift(payload);
+
+        // Catat riwayat kumulatif di latar belakang jika bukan akun Pro
+        if (user && window.AuthManager) {
+          const isPro = AuthManager.isSubscribed();
+          if (!isPro) {
+            await AuthManager.incrementTrialUsage(user.uid);
+          }
+        }
         showToast("Logbook baru tersimpan ke Cloud!", "success");
       }
 
