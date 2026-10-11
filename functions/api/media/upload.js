@@ -101,17 +101,26 @@ async function getOrCreateFolder(folderName, parentId, accessToken) {
 export async function onRequestPost(context) {
   const { request, env } = context;
 
-  // Konfigurasi Kredensial Google Drive dari Environment Variables
-  const clientId = (env && env.GOOGLE_DRIVE_CLIENT_ID) || (typeof process !== 'undefined' && process.env && process.env.GOOGLE_DRIVE_CLIENT_ID) || '';
-  const clientSecret = (env && env.GOOGLE_DRIVE_CLIENT_SECRET) || (typeof process !== 'undefined' && process.env && process.env.GOOGLE_DRIVE_CLIENT_SECRET) || '';
-  const refreshToken = (env && env.GOOGLE_DRIVE_REFRESH_TOKEN) || (typeof process !== 'undefined' && process.env && process.env.GOOGLE_DRIVE_REFRESH_TOKEN) || '';
-  const parentFolderId = (env && env.GOOGLE_DRIVE_PARENT_FOLDER_ID) || (typeof process !== 'undefined' && process.env && process.env.GOOGLE_DRIVE_PARENT_FOLDER_ID) || null;
+  // Konfigurasi Kredensial Google Drive dari Environment Variables (dengan toleransi alias nama)
+  const clientId = (env && (env.GOOGLE_DRIVE_CLIENT_ID || env.DRIVE_CLIENT_ID || env.RIVE_CLIENT_ID)) || 
+    (typeof process !== 'undefined' && process.env && (process.env.GOOGLE_DRIVE_CLIENT_ID || process.env.DRIVE_CLIENT_ID || process.env.RIVE_CLIENT_ID)) || '';
+  const clientSecret = (env && (env.GOOGLE_DRIVE_CLIENT_SECRET || env.DRIVE_CLIENT_SECRET || env.RIVE_CLIENT_SECRET)) || 
+    (typeof process !== 'undefined' && process.env && (process.env.GOOGLE_DRIVE_CLIENT_SECRET || process.env.DRIVE_CLIENT_SECRET || process.env.RIVE_CLIENT_SECRET)) || '';
+  const refreshToken = (env && (env.GOOGLE_DRIVE_REFRESH_TOKEN || env.DRIVE_REFRESH_TOKEN || env.RIVE_REFRESH_TOKEN)) || 
+    (typeof process !== 'undefined' && process.env && (process.env.GOOGLE_DRIVE_REFRESH_TOKEN || process.env.DRIVE_REFRESH_TOKEN || process.env.RIVE_REFRESH_TOKEN)) || '';
+  const parentFolderId = (env && (env.GOOGLE_DRIVE_PARENT_FOLDER_ID || env.DRIVE_PARENT_FOLDER_ID || env.RIVE_PARENT_FOLDER_ID)) || 
+    (typeof process !== 'undefined' && process.env && (process.env.GOOGLE_DRIVE_PARENT_FOLDER_ID || process.env.DRIVE_PARENT_FOLDER_ID)) || null;
   const rootFolderName = 'Logbook_Penelitian_App';
 
-  if (!clientId || !clientSecret || !refreshToken) {
+  const missingKeys = [];
+  if (!clientId) missingKeys.push('GOOGLE_DRIVE_CLIENT_ID');
+  if (!clientSecret) missingKeys.push('GOOGLE_DRIVE_CLIENT_SECRET');
+  if (!refreshToken) missingKeys.push('GOOGLE_DRIVE_REFRESH_TOKEN');
+
+  if (missingKeys.length > 0) {
     return new Response(JSON.stringify({
       success: false,
-      message: 'Kredensial GOOGLE_DRIVE_REFRESH_TOKEN belum dikonfigurasi di Cloudflare Pages Environment Variables'
+      message: `Kredensial ${missingKeys.join(', ')} belum dikonfigurasi di Cloudflare Pages Environment Variables`
     }), {
       status: 500,
       headers: {
