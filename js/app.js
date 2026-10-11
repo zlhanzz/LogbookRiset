@@ -78,6 +78,7 @@
 
     // Elemen Halaman Sukses Pembayaran & Tanda Terima Digital
     receiptOrderIdText: document.getElementById("receiptOrderIdText"),
+    receiptPackageNameText: document.getElementById("receiptPackageNameText"),
     receiptPaymentMethodText: document.getElementById("receiptPaymentMethodText"),
     receiptTimestampText: document.getElementById("receiptTimestampText"),
     receiptUserEmailText: document.getElementById("receiptUserEmailText"),
@@ -623,6 +624,7 @@
     });
 
     if (DOM.receiptOrderIdText) DOM.receiptOrderIdText.textContent = `Order #${orderId}`;
+    if (DOM.receiptPackageNameText) DOM.receiptPackageNameText.textContent = "Akses Sistem Logbook Riset (30 Hari)";
     if (DOM.receiptPaymentMethodText) DOM.receiptPaymentMethodText.textContent = methodName;
     if (DOM.receiptTimestampText) DOM.receiptTimestampText.textContent = dateFormatter.format(completedDate);
     if (DOM.receiptUserEmailText) DOM.receiptUserEmailText.textContent = (user && user.email) || "-";
