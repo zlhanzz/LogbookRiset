@@ -3013,8 +3013,11 @@
         const saved = localStorage.getItem("LOGBOOK_ACTIVE_PAYMENT_ORDER");
         if (saved) {
           const parsed = JSON.parse(saved);
-          if (parsed && (!parsed.userId || parsed.userId === activeUser.uid)) {
+          if (parsed && parsed.userId === activeUser.uid) {
             state.currentPaymentOrder = parsed;
+          } else if (parsed && parsed.userId && parsed.userId !== activeUser.uid) {
+            // Bersihkan order milik pengguna lain yang tersisa di browser
+            localStorage.removeItem("LOGBOOK_ACTIVE_PAYMENT_ORDER");
           }
         }
       } catch (e) {}
@@ -3282,13 +3285,18 @@
         if (saved) {
           const parsed = JSON.parse(saved);
           if (parsed && parsed.orderId && !checkedOrderIds.has(parsed.orderId)) {
-            ordersToCheck.push({
-              orderId: parsed.orderId,
-              txnId: parsed.txnId || "",
-              amount: parsed.totalPayment || parsed.amount || 50000,
-              method: parsed.method || "qris"
-            });
-            checkedOrderIds.add(parsed.orderId);
+            if (parsed.userId === user.uid) {
+              ordersToCheck.push({
+                orderId: parsed.orderId,
+                txnId: parsed.txnId || "",
+                amount: parsed.totalPayment || parsed.amount || 50000,
+                method: parsed.method || "qris"
+              });
+              checkedOrderIds.add(parsed.orderId);
+            } else if (parsed.userId && parsed.userId !== user.uid) {
+              // Bersihkan cache order jika milik pengguna lain di browser ini
+              localStorage.removeItem("LOGBOOK_ACTIVE_PAYMENT_ORDER");
+            }
           }
         }
       } catch (e) {}
@@ -3321,18 +3329,6 @@
         } catch (dbErr) {
           console.warn("Gagal membaca pending transactions dari Firestore:", dbErr);
         }
-      }
-
-      // 4. Fallback transaksi riil LB-1791775865570 jika akun belum aktif
-      const isSub = window.AuthManager && AuthManager.isSubscribed && AuthManager.isSubscribed();
-      if (!isSub && !checkedOrderIds.has("LB-1791775865570")) {
-        ordersToCheck.push({
-          orderId: "LB-1791775865570",
-          txnId: "",
-          amount: 50000,
-          method: "qris"
-        });
-        checkedOrderIds.add("LB-1791775865570");
       }
 
       if (ordersToCheck.length === 0) {

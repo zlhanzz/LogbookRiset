@@ -326,6 +326,7 @@ const AuthManager = {
       const userRef = FirebaseService.db.collection("users").doc(uid);
       const userDoc = await userRef.get();
       if (userDoc.exists) {
+        const data = userDoc.data() || {};
         // Sinkronisasi status data contoh dihapus permanen
         if (typeof data.dummy_dismissed === "boolean") {
           this.setDummyDismissed(uid, data.dummy_dismissed);
