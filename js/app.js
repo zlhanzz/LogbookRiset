@@ -2735,6 +2735,12 @@
       return;
     }
 
+    if (window.AuthManager && AuthManager.isSubscribed && AuthManager.isSubscribed()) {
+      showToast("Akun Anda telah memiliki paket langganan aktif. Tidak dapat membuat tagihan ganda.", "info");
+      navigateTo(ROUTES.DASHBOARD, true);
+      return;
+    }
+
     if (method === "payment_link") {
       showToast("Menyiapkan laman pembayaran...", "info");
       try {

@@ -3600,8 +3600,8 @@ textarea.form-control {
 .channel-title-row {
   display: flex;
   align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
+  gap: 6px;
+  flex-wrap: nowrap;
 }
 
 .channel-name {
@@ -5126,6 +5126,291 @@ textarea.form-control {
   padding: 24px;
   box-shadow: var(--shadow-sm);
 }
+
+/* Responsivitas Mobile Khusus Portal Checkout (/checkout) */
+@media (max-width: 640px) {
+  .checkout-view-wrapper {
+    padding-bottom: 36px;
+  }
+
+  .checkout-container {
+    padding: 12px 12px 32px;
+  }
+
+  .route-nav-bar {
+    margin-bottom: 8px;
+  }
+
+  .btn-route-back {
+    font-size: 0.78rem;
+    padding: 4px 0;
+    gap: 5px;
+  }
+
+  .checkout-header {
+    margin-bottom: 12px;
+  }
+
+  .checkout-title {
+    font-size: 1.25rem;
+    margin-bottom: 3px;
+    line-height: 1.25;
+  }
+
+  .checkout-subtitle {
+    font-size: 0.76rem;
+    line-height: 1.35;
+  }
+
+  .checkout-layout-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  /* Ringkasan Pesanan Kompak di Mobile */
+  .order-summary-card {
+    position: static;
+    padding: 12px 14px;
+    border-radius: var(--radius-md);
+  }
+
+  .summary-card-title {
+    font-size: 0.82rem;
+    margin-bottom: 8px;
+    padding-bottom: 6px;
+  }
+
+  .summary-item-card {
+    margin-bottom: 8px;
+    gap: 8px;
+  }
+
+  .summary-item-meta .item-name {
+    font-size: 0.8rem;
+    line-height: 1.25;
+  }
+
+  .summary-item-meta .item-duration {
+    font-size: 0.68rem;
+  }
+
+  .summary-item-card .item-price {
+    font-size: 0.82rem;
+  }
+
+  .summary-cost-breakdown {
+    padding: 8px 10px;
+    margin-bottom: 0;
+  }
+
+  .cost-row {
+    font-size: 0.74rem;
+    margin-bottom: 4px;
+  }
+
+  .cost-divider {
+    margin: 5px 0;
+  }
+
+  .grand-total-row {
+    font-size: 0.82rem;
+  }
+
+  .grand-total-val {
+    font-size: 0.95rem;
+  }
+
+  /* Kolom Gateway & Pilihan Saluran di Mobile */
+  .checkout-gateway-column {
+    padding: 14px 12px;
+    border-radius: var(--radius-md);
+  }
+
+  .channel-section-header {
+    margin-bottom: 10px;
+  }
+
+  .channel-section-title {
+    font-size: 0.92rem;
+    margin-bottom: 2px;
+  }
+
+  .channel-section-desc {
+    font-size: 0.74rem;
+    line-height: 1.35;
+  }
+
+  .channel-group-heading {
+    font-size: 0.72rem;
+    margin-top: 10px !important;
+    margin-bottom: 6px;
+    letter-spacing: 0.3px;
+  }
+
+  .payment-channels-list {
+    gap: 7px;
+  }
+
+  .payment-channel-card {
+    padding: 9px 10px;
+    min-height: 50px;
+    gap: 9px;
+    border-radius: 6px;
+  }
+
+  .channel-logo-wrapper {
+    width: 48px;
+    height: 30px;
+    padding: 2px 4px;
+    border-radius: 4px;
+  }
+
+  .channel-card-info {
+    padding-right: 4px;
+    gap: 2px;
+  }
+
+  .channel-name {
+    font-size: 0.78rem;
+    line-height: 1.25;
+  }
+
+  .channel-title-row {
+    gap: 6px;
+    flex-wrap: nowrap;
+    align-items: center;
+  }
+
+  .channel-badge-pill {
+    font-size: 0.58rem;
+    padding: 1px 4px;
+    letter-spacing: 0.2px;
+  }
+
+  .btn-select-channel {
+    padding: 5px 8px;
+    font-size: 0.7rem;
+    border-radius: 4px;
+    white-space: nowrap;
+  }
+
+  /* Active Payment Views di Mobile */
+  .active-payment-nav {
+    margin-bottom: 8px;
+  }
+
+  .btn-back-channel {
+    font-size: 0.74rem;
+  }
+
+  .qris-card {
+    padding: 14px 12px;
+    margin-bottom: 12px;
+  }
+
+  .qris-header-row {
+    margin-bottom: 8px;
+    padding-bottom: 6px;
+  }
+
+  .qris-logo-text {
+    font-size: 0.78rem;
+  }
+
+  .qris-order-tag {
+    font-size: 0.68rem;
+  }
+
+  .qris-image-container {
+    width: 175px;
+    height: 175px;
+    margin: 8px auto;
+  }
+
+  .sandbox-notice-box {
+    padding: 9px 11px;
+    margin-bottom: 10px;
+  }
+
+  .sandbox-text {
+    font-size: 0.7rem;
+  }
+
+  .qris-amount-summary {
+    padding: 10px 12px;
+    margin-top: 10px;
+  }
+
+  .qris-instructions {
+    font-size: 0.7rem;
+    margin-top: 8px;
+    line-height: 1.35;
+  }
+
+  .va-card {
+    padding: 12px 10px;
+    margin-bottom: 12px;
+  }
+
+  .va-header-row {
+    margin-bottom: 8px;
+    padding-bottom: 6px;
+  }
+
+  .va-bank-title {
+    font-size: 0.82rem;
+  }
+
+  .va-number-container {
+    padding: 10px 12px;
+    margin-bottom: 10px;
+  }
+
+  .va-number-row {
+    margin-top: 2px;
+    gap: 6px;
+  }
+
+  .va-number-val {
+    font-size: 1.05rem;
+    letter-spacing: 0.5px;
+  }
+
+  .btn-copy {
+    padding: 4px 10px;
+    font-size: 0.72rem;
+  }
+
+  .va-amount-container {
+    padding: 10px 12px;
+    margin-bottom: 10px;
+  }
+
+  .va-instructions-box {
+    padding: 10px 12px;
+  }
+
+  .va-instructions-title {
+    font-size: 0.74rem;
+    margin-bottom: 4px;
+  }
+
+  .va-instructions-list {
+    font-size: 0.68rem;
+    padding-left: 15px;
+    line-height: 1.4;
+  }
+
+  .qris-action-buttons {
+    margin-top: 10px;
+  }
+
+  .qris-action-buttons .btn {
+    padding: 10px 16px;
+    font-size: 0.85rem;
+  }
+}
+
 
 /* ==========================================================================
    7. HALAMAN SUKSES PEMBAYARAN (/payment-success) & TANDA TERIMA DIGITAL

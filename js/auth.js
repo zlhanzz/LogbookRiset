@@ -742,6 +742,7 @@ const AuthManager = {
       localStorage.removeItem(this.STORAGE_KEYS.LOCAL_USER);
       localStorage.removeItem("LOGBOOK_RESEARCH_PROFILE_V3");
       localStorage.removeItem("LOGBOOK_SAVED_CATEGORIES_V3");
+      localStorage.removeItem("LOGBOOK_ACTIVE_PAYMENT_ORDER");
     } catch (e) {}
     this.notifyUserChanged();
   },
