@@ -691,11 +691,11 @@
       return;
     }
 
-    // Bersihkan pesanan jika milik akun lain (Isolasi Multi-Tenant)
-    if (state.lastCompletedOrder && state.lastCompletedOrder.userId && state.lastCompletedOrder.userId !== user.uid) {
+    // Bersihkan pesanan jika milik akun lain atau tanpa userId (Isolasi Multi-Tenant Mutlak)
+    if (state.lastCompletedOrder && (!state.lastCompletedOrder.userId || state.lastCompletedOrder.userId !== user.uid)) {
       state.lastCompletedOrder = null;
     }
-    if (state.currentPaymentOrder && state.currentPaymentOrder.userId && state.currentPaymentOrder.userId !== user.uid) {
+    if (state.currentPaymentOrder && (!state.currentPaymentOrder.userId || state.currentPaymentOrder.userId !== user.uid)) {
       state.currentPaymentOrder = null;
     }
 
@@ -3019,14 +3019,16 @@
         const saved = localStorage.getItem("LOGBOOK_ACTIVE_PAYMENT_ORDER");
         if (saved) {
           const parsed = JSON.parse(saved);
-          if (parsed && parsed.userId === activeUser.uid) {
+          if (parsed && parsed.userId === activeUser.uid && parsed.orderId) {
             state.currentPaymentOrder = parsed;
-          } else if (parsed && parsed.userId && parsed.userId !== activeUser.uid) {
-            // Bersihkan order milik pengguna lain yang tersisa di browser
+          } else {
+            // Bersihkan order tanpa userId atau milik akun lain yang tersisa di browser
             localStorage.removeItem("LOGBOOK_ACTIVE_PAYMENT_ORDER");
           }
         }
-      } catch (e) {}
+      } catch (e) {
+        try { localStorage.removeItem("LOGBOOK_ACTIVE_PAYMENT_ORDER"); } catch (_) {}
+      }
     }
 
     if (!state.currentPaymentOrder) {
@@ -3274,24 +3276,29 @@
       const ordersToCheck = [];
       const checkedOrderIds = new Set();
 
-      // 1. Periksa memory state
+      // 1. Periksa memory state (hanya jika sah milik user ini)
       if (state.currentPaymentOrder && state.currentPaymentOrder.orderId) {
-        ordersToCheck.push({
-          orderId: state.currentPaymentOrder.orderId,
-          txnId: state.currentPaymentOrder.txnId || "",
-          amount: state.currentPaymentOrder.totalPayment || state.currentPaymentOrder.amount || 50000,
-          method: state.currentPaymentOrder.method || "qris"
-        });
-        checkedOrderIds.add(state.currentPaymentOrder.orderId);
+        if (state.currentPaymentOrder.userId === user.uid) {
+          ordersToCheck.push({
+            orderId: state.currentPaymentOrder.orderId,
+            txnId: state.currentPaymentOrder.txnId || "",
+            amount: state.currentPaymentOrder.totalPayment || state.currentPaymentOrder.amount || 50000,
+            method: state.currentPaymentOrder.method || "qris"
+          });
+          checkedOrderIds.add(state.currentPaymentOrder.orderId);
+        } else {
+          // Bersihkan order memori yang bukan milik user aktif
+          state.currentPaymentOrder = null;
+        }
       }
 
-      // 2. Periksa LocalStorage
+      // 2. Periksa LocalStorage (hanya jika sah milik user ini)
       try {
         const saved = localStorage.getItem("LOGBOOK_ACTIVE_PAYMENT_ORDER");
         if (saved) {
           const parsed = JSON.parse(saved);
-          if (parsed && parsed.orderId && !checkedOrderIds.has(parsed.orderId)) {
-            if (parsed.userId === user.uid) {
+          if (parsed && parsed.orderId && parsed.userId === user.uid) {
+            if (!checkedOrderIds.has(parsed.orderId)) {
               ordersToCheck.push({
                 orderId: parsed.orderId,
                 txnId: parsed.txnId || "",
@@ -3299,13 +3306,15 @@
                 method: parsed.method || "qris"
               });
               checkedOrderIds.add(parsed.orderId);
-            } else if (parsed.userId && parsed.userId !== user.uid) {
-              // Bersihkan cache order jika milik pengguna lain di browser ini
-              localStorage.removeItem("LOGBOOK_ACTIVE_PAYMENT_ORDER");
             }
+          } else {
+            // Hapus paksa cache tanpa userId atau milik user lain
+            localStorage.removeItem("LOGBOOK_ACTIVE_PAYMENT_ORDER");
           }
         }
-      } catch (e) {}
+      } catch (e) {
+        try { localStorage.removeItem("LOGBOOK_ACTIVE_PAYMENT_ORDER"); } catch (_) {}
+      }
 
       // 3. Periksa Cloud Firestore users/{uid}/transactions
       if (window.FirebaseService && FirebaseService.db && !user.isDemo) {

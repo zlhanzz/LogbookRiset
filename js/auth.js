@@ -234,6 +234,13 @@ const AuthManager = {
     // Bersihkan legacy cache global tanpa UID agar tidak membocorkan data lama
     try {
       localStorage.removeItem(this.STORAGE_KEYS.LOCAL_SUBSCRIPTION);
+      const activeOrder = localStorage.getItem("LOGBOOK_ACTIVE_PAYMENT_ORDER");
+      if (activeOrder) {
+        const parsed = JSON.parse(activeOrder);
+        if (!parsed || !parsed.userId) {
+          localStorage.removeItem("LOGBOOK_ACTIVE_PAYMENT_ORDER");
+        }
+      }
     } catch (e) {}
 
     this.subscription = this.getDefaultSubscription();
