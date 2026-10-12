@@ -1650,8 +1650,28 @@
         <h2 class="pricing-title">Paket Lengkap Akses Peneliti</h2>
       </div>
 
-      <!-- Pricing Hero Tier Card Tunggal -->
-      <div class="pricing-card-highlight">
+      <!-- Pricing Active Subscription Card (Ditampilkan jika pengguna telah memiliki langganan aktif) -->
+      <div id="pricingActiveSubscriptionCard" class="pricing-card-highlight hidden">
+        <div class="pricing-card-header">
+          <div class="plan-tag" style="background: #064e3b; color: #ffffff;">Paket Riset Aktif</div>
+          <div class="pricing-amount-row" style="margin-top: 12px;">
+            <span class="currency" style="font-size: 1.25rem; font-weight: 700; color: #064e3b;">Status: </span>
+            <span class="amount" id="pricingActiveStatusText" style="font-size: 1.75rem; color: #064e3b;">Aktif</span>
+          </div>
+          <p class="pricing-summary-text" id="pricingActivePeriodText" style="margin-top: 8px; font-weight: 600; color: #334155;">
+            Masa aktif langganan Anda aktif untuk 30 hari ke depan. Tidak diperlukan pembayaran ulang.
+          </p>
+        </div>
+        <div class="pricing-card-action">
+          <button type="button" class="btn btn-primary btn-block btn-lg" id="btnActiveSubToDashboard" data-route="/dashboard">
+            <span>Buka Ruang Kerja (Dashboard)</span>
+          </button>
+          <span class="pricing-guarantee-note">Seluruh fitur unggulan (Auto Transkrip AI, Unggah Media, Ekspor Word) siap digunakan</span>
+        </div>
+      </div>
+
+      <!-- Pricing Hero Tier Card Tunggal (Beli / Upgrade) -->
+      <div class="pricing-card-highlight" id="pricingDefaultCard">
         <div class="pricing-card-header">
           <div class="plan-tag">Paket Riset 30 Hari</div>
           <div class="pricing-amount-row">

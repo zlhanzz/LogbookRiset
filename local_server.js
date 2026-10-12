@@ -508,53 +508,106 @@ const server = http.createServer(async (req, res) => {
     }
   }
 
-  // Endpoint API /api/payment/status: Cek status transaksi Pakasir API v2
+  // Endpoint API /api/payment/status: Cek status transaksi Pakasir API v2 & Dual-Query Verification
   if (urlPath === '/api/payment/status' && req.method === 'GET') {
     const env = loadEnv();
     const slug = env.PAKASIR_SLUG || 'logbook-riset';
-    const txnId = parsedUrl.searchParams.get('txn_id') || parsedUrl.searchParams.get('txnId') || parsedUrl.searchParams.get('order_id');
+    const apiKey = env.PAKASIR_API_KEY || '';
+    const txnId = parsedUrl.searchParams.get('txn_id') || parsedUrl.searchParams.get('txnId');
+    const orderId = parsedUrl.searchParams.get('order_id') || parsedUrl.searchParams.get('orderId');
+    const amount = parseInt(parsedUrl.searchParams.get('amount') || env.PAKASIR_AMOUNT || '50000', 10);
+    const lookupTarget = txnId || orderId;
 
-    if (!txnId) {
+    if (!lookupTarget) {
       return sendJson(res, 400, { success: false, message: 'Parameter txn_id atau order_id wajib diisi' });
     }
 
-    const apiKey = env.PAKASIR_API_KEY || '';
-    const options = {
-      hostname: 'app.pakasir.com',
-      path: `/api/v2/transaction-status/${encodeURIComponent(slug)}/${encodeURIComponent(txnId)}`,
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Api-Key': apiKey
-      },
-      timeout: 8000
-    };
+    // 1. Prioritas 1: Jika order_id ada, query detail langsung ke Pakasir
+    if (orderId) {
+      try {
+        const detailUrl = `https://app.pakasir.com/api/transactiondetail?project=${encodeURIComponent(slug)}&order_id=${encodeURIComponent(orderId)}&amount=${amount}&api_key=${encodeURIComponent(apiKey)}`;
+        https.get(detailUrl, (dRes) => {
+          let dData = '';
+          dRes.on('data', c => dData += c);
+          dRes.on('end', () => {
+            try {
+              const dJson = JSON.parse(dData);
+              const tx = dJson.transaction || dJson;
+              if (tx && (tx.status === 'completed' || tx.status === 'paid' || tx.status === 'settlement')) {
+                return sendJson(res, 200, {
+                  success: true,
+                  status: 'completed',
+                  order_id: tx.order_id || orderId,
+                  txn_id: tx.txn_id || txnId || '',
+                  amount: tx.amount || amount,
+                  fee: tx.fee || 0,
+                  payment_method: tx.payment_method || 'qris',
+                  completed_at: tx.completed_at || new Date().toISOString(),
+                  is_sandbox: Boolean(tx.is_sandbox),
+                  verified_by: 'order_id_detail'
+                });
+              }
+              // Jika belum completed via detail, fallback ke v2 query
+              queryV2Status();
+            } catch (err) {
+              queryV2Status();
+            }
+          });
+        }).on('error', () => queryV2Status());
+        return;
+      } catch (e) {
+        // Lanjutkan ke v2
+      }
+    }
 
-    const statusReq = https.request(options, (statusRes) => {
-      let data = '';
-      statusRes.on('data', chunk => { data += chunk; });
-      statusRes.on('end', () => {
-        try {
-          const parsed = JSON.parse(data);
-          if (statusRes.statusCode === 429) {
-            return sendJson(res, 200, {
-              status: 'pending',
-              rate_limited: true,
-              message: 'Pengecekan status dibatasi maksimal 4 detik sekali oleh gateway Pakasir.'
-            });
+    function queryV2Status() {
+      const options = {
+        hostname: 'app.pakasir.com',
+        path: `/api/v2/transaction-status/${encodeURIComponent(slug)}/${encodeURIComponent(txnId || lookupTarget)}`,
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Api-Key': apiKey
+        },
+        timeout: 8000
+      };
+
+      const statusReq = https.request(options, (statusRes) => {
+        let data = '';
+        statusRes.on('data', chunk => { data += chunk; });
+        statusRes.on('end', () => {
+          try {
+            const parsed = JSON.parse(data);
+            if (statusRes.statusCode === 429) {
+              return sendJson(res, 200, {
+                status: 'pending',
+                rate_limited: true,
+                message: 'Pengecekan status dibatasi maksimal 4 detik sekali oleh gateway Pakasir.'
+              });
+            }
+            if (parsed.status === 'completed' || parsed.status === 'paid' || parsed.status === 'settlement') {
+              return sendJson(res, 200, {
+                success: true,
+                ...parsed,
+                order_id: parsed.order_id || orderId || lookupTarget,
+                status: 'completed'
+              });
+            }
+            return sendJson(res, statusRes.statusCode || 200, parsed);
+          } catch (e) {
+            return sendJson(res, 200, { status: 'pending', raw: data });
           }
-          return sendJson(res, statusRes.statusCode || 200, parsed);
-        } catch (e) {
-          return sendJson(res, 200, { status: 'pending', raw: data });
-        }
+        });
       });
-    });
 
-    statusReq.on('error', (err) => {
-      return sendJson(res, 200, { status: 'pending', error: err.message });
-    });
+      statusReq.on('error', (err) => {
+        return sendJson(res, 200, { status: 'pending', error: err.message });
+      });
 
-    statusReq.end();
+      statusReq.end();
+    }
+
+    queryV2Status();
     return;
   }
 
