@@ -108,7 +108,7 @@ const server = http.createServer(async (req, res) => {
       messagingSenderId: env.FIREBASE_MESSAGING_SENDER_ID || process.env.FIREBASE_MESSAGING_SENDER_ID || '',
       appId: env.FIREBASE_APP_ID || process.env.FIREBASE_APP_ID || '',
       measurementId: env.FIREBASE_MEASUREMENT_ID || process.env.FIREBASE_MEASUREMENT_ID || '',
-      pakasirSlug: env.PAKASIR_SLUG || 'logbook-otomatis',
+      pakasirSlug: env.PAKASIR_SLUG || 'logbook-riset',
       pakasirAmount: parseInt(env.PAKASIR_AMOUNT || '50000', 10)
     };
 
@@ -429,7 +429,7 @@ const server = http.createServer(async (req, res) => {
   if (urlPath === '/api/payment/create' && req.method === 'POST') {
     const env = loadEnv();
     const body = await readBody(req);
-    const slug = env.PAKASIR_SLUG || 'logbook-otomatis';
+    const slug = env.PAKASIR_SLUG || 'logbook-riset';
     const apiKey = env.PAKASIR_API_KEY || '';
     const orderId = body.order_id || `LB-${Date.now()}`;
     const amount = parseInt(body.amount || env.PAKASIR_AMOUNT || '50000', 10);
@@ -511,7 +511,7 @@ const server = http.createServer(async (req, res) => {
   // Endpoint API /api/payment/status: Cek status transaksi Pakasir API v2
   if (urlPath === '/api/payment/status' && req.method === 'GET') {
     const env = loadEnv();
-    const slug = env.PAKASIR_SLUG || 'logbook-otomatis';
+    const slug = env.PAKASIR_SLUG || 'logbook-riset';
     const txnId = parsedUrl.searchParams.get('txn_id') || parsedUrl.searchParams.get('txnId') || parsedUrl.searchParams.get('order_id');
 
     if (!txnId) {
@@ -562,7 +562,7 @@ const server = http.createServer(async (req, res) => {
   if (urlPath === '/api/payment/simulate' && req.method === 'POST') {
     const env = loadEnv();
     const body = await readBody(req);
-    const slug = env.PAKASIR_SLUG || 'logbook-otomatis';
+    const slug = env.PAKASIR_SLUG || 'logbook-riset';
     const apiKey = env.PAKASIR_API_KEY || '';
     const orderId = body.order_id || '';
     const amount = parseInt(body.amount || env.PAKASIR_AMOUNT || '50000', 10);

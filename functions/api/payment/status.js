@@ -20,8 +20,8 @@ export async function onRequestGet(context) {
   const { request, env } = context;
   const url = new URL(request.url);
 
-  const slug = (env && env.PAKASIR_SLUG) || 'logbook-otomatis';
-  const apiKey = (env && env.PAKASIR_API_KEY) || 'GkLiMGVm8xvz4yB528ANrygljI6K4pHi';
+  const slug = (env && env.PAKASIR_SLUG) || 'logbook-riset';
+  const apiKey = (env && env.PAKASIR_API_KEY) || '7tRYFhtoCH8a5zogIGh46UW1Qellx4eX';
 
   const txnId = url.searchParams.get('txn_id') || url.searchParams.get('txnId') || url.searchParams.get('order_id');
 

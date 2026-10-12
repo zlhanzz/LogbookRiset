@@ -19,8 +19,8 @@ export async function onRequestOptions() {
 export async function onRequestPost(context) {
   const { request, env } = context;
 
-  const slug = (env && env.PAKASIR_SLUG) || 'logbook-otomatis';
-  const apiKey = (env && env.PAKASIR_API_KEY) || 'GkLiMGVm8xvz4yB528ANrygljI6K4pHi';
+  const slug = (env && env.PAKASIR_SLUG) || 'logbook-riset';
+  const apiKey = (env && env.PAKASIR_API_KEY) || '7tRYFhtoCH8a5zogIGh46UW1Qellx4eX';
   const defaultAmount = parseInt((env && env.PAKASIR_AMOUNT) || '50000', 10);
 
   let body = {};

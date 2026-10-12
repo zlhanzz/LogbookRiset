@@ -41,7 +41,7 @@ export async function onRequestGet() {
  */
 export async function onRequestPost(context) {
   const { request, env } = context;
-  const webhookSecret = (env && env.PAKASIR_WEBHOOK_SECRET) || '616860e68e5ab242a7b6ee60370e8865';
+  const webhookSecret = (env && env.PAKASIR_WEBHOOK_SECRET) || '054cf29d8d267043f784a99f83451fcd';
 
   const secret = request.headers.get('x-secret') || request.headers.get('X-Secret') || '';
 
