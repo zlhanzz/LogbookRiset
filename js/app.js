@@ -1764,6 +1764,9 @@
         const streamUrl = m.stream_url || primaryStreamUrl;
         const formattedSize = formatBytes(m.size);
         const transcript = (m.transcript || (mIdx === 0 ? entry.transcript : "") || "").trim();
+        const MAX_TRANSCRIPT_ATTEMPTS = 3;
+        const attempts = Number(m.transcript_attempts !== undefined ? m.transcript_attempts : (transcript ? 1 : 0));
+        const remainingAttempts = Math.max(0, MAX_TRANSCRIPT_ATTEMPTS - attempts);
 
         return `
           <div class="media-player-item-block">
@@ -1821,20 +1824,48 @@
                   <button type="button" class="btn-transcript-start" id="btnTranscribe_${entry.id}_${mIdx}" onclick="triggerAutoTranscription('${entry.id}', ${mIdx}, '${escapeHtml(fileId)}', '${escapeHtml(m.file_name || "")}', ${Number(m.size || 0)})">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
                     <span>Auto-Transkrip (Berbasis AI)</span>
+                    <span class="transcript-quota-pill">${remainingAttempts}x Kesempatan</span>
                   </button>
                 `}
               </div>
 
               <div class="transcript-content-box hidden" id="transcriptContent_${entry.id}_${mIdx}">
-                <div class="transcript-header-row">
-                  <span class="transcript-title">Transkrip Percakapan:</span>
-                  <div class="transcript-actions">
-                    <button type="button" class="btn-copy-transcript" onclick="copyTranscriptText('${entry.id}', ${mIdx}, this)">Salin Teks</button>
-                    <button type="button" class="btn-close-transcript" onclick="toggleTranscriptView('${entry.id}', ${mIdx})">Tutup</button>
+                <!-- Mode Tampilan Normal (Read-Only Nyaman & Aman dari Salah Ketik) -->
+                <div class="transcript-view-mode" id="transcriptViewMode_${entry.id}_${mIdx}">
+                  <div class="transcript-header-row">
+                    <span class="transcript-title">Transkrip Percakapan:</span>
+                    <div class="transcript-actions">
+                      <button type="button" class="btn-copy-transcript" onclick="copyTranscriptText('${entry.id}', ${mIdx}, this)">Salin Teks</button>
+                      <button type="button" class="btn-edit-transcript" onclick="enterEditTranscript('${entry.id}', ${mIdx})">Edit</button>
+                      <button type="button" class="btn-close-transcript" onclick="toggleTranscriptView('${entry.id}', ${mIdx})">Tutup</button>
+                    </div>
+                  </div>
+                  <div class="transcript-text" id="transcriptText_${entry.id}_${mIdx}">${escapeHtml(transcript)}</div>
+                  <div class="transcript-footer-row">
+                    <div class="transcript-hint" id="transcriptHint_${entry.id}_${mIdx}">
+                      Teks transkrip tersimpan aman di Cloud.
+                      ${remainingAttempts > 0 
+                        ? `Sisa kuota transkrip ulang: ${remainingAttempts} kali.` 
+                        : `Batas kuota transkrip audio ini telah tercapai (3/3 kali).`}
+                    </div>
+                    ${remainingAttempts > 0 ? `
+                      <button type="button" class="btn-retranscribe" id="btnRetranscribe_${entry.id}_${mIdx}" onclick="confirmReTranscription('${entry.id}', ${mIdx}, '${escapeHtml(fileId)}', '${escapeHtml(m.file_name || "")}', ${Number(m.size || 0)}, ${remainingAttempts}, this)">Transkrip Ulang (${remainingAttempts}x)</button>
+                    ` : ""}
                   </div>
                 </div>
-                <div class="transcript-text" id="transcriptText_${entry.id}_${mIdx}">${escapeHtml(transcript)}</div>
-                <div class="transcript-hint">Teks transkrip otomatis tersimpan aman di Cloud dan siap disalin atau diekspor ke Word (.docx).</div>
+
+                <!-- Mode Edit Terkontrol (Hanya aktif jika tombol Edit ditekan secara sadar) -->
+                <div class="transcript-edit-mode hidden" id="transcriptEditMode_${entry.id}_${mIdx}">
+                  <div class="transcript-header-row">
+                    <span class="transcript-title">Koreksi Teks Transkrip:</span>
+                    <div class="transcript-actions">
+                      <button type="button" class="btn-save-transcript" onclick="saveEditedTranscriptExplicit('${entry.id}', ${mIdx}, this)">Simpan</button>
+                      <button type="button" class="btn-cancel-transcript" onclick="cancelEditTranscript('${entry.id}', ${mIdx})">Batal</button>
+                    </div>
+                  </div>
+                  <textarea class="transcript-edit-textarea" id="transcriptEditInput_${entry.id}_${mIdx}" rows="6" placeholder="Ketik atau koreksi teks transkrip di sini...">${escapeHtml(transcript)}</textarea>
+                  <div class="transcript-hint">Koreksi teks di atas, lalu klik "Simpan" untuk memperbarui data ke Cloud.</div>
+                </div>
               </div>
             </div>
             ` : ""}
@@ -2051,8 +2082,22 @@
     return chunks;
   }
 
-  window.triggerAutoTranscription = async function(logbookId, mIdx, fileId, fileName, fileSize = 0) {
-    const btn = document.getElementById(`btnTranscribe_${logbookId}_${mIdx}`);
+  window.confirmReTranscription = function(logbookId, mIdx, fileId, fileName, fileSize, remaining, btnElement) {
+    if (remaining <= 0) {
+      showToast("Batas kuota transkrip audio ini telah tercapai (maksimal 3 kali).", "warning");
+      return;
+    }
+
+    const confirmMsg = `Transkrip ulang audio ini?\n\nTeks transkrip saat ini akan ditimpa dengan hasil transkripsi AI yang baru.\nSisa kuota transkrip berkas ini: ${remaining} kali.\n\nLanjutkan?`;
+    if (!window.confirm(confirmMsg)) {
+      return;
+    }
+
+    window.triggerAutoTranscription(logbookId, mIdx, fileId, fileName, fileSize, btnElement);
+  };
+
+  window.triggerAutoTranscription = async function(logbookId, mIdx, fileId, fileName, fileSize = 0, callerBtn = null) {
+    const btn = callerBtn || document.getElementById(`btnRetranscribe_${logbookId}_${mIdx}`) || document.getElementById(`btnTranscribe_${logbookId}_${mIdx}`);
     if (!fileId) {
       showToast("Berkas media tidak memiliki ID cloud untuk ditranskripsi.", "error");
       return;
@@ -2167,19 +2212,28 @@
         throw new Error("Hasil transkrip kosong. Pastikan suara rekaman terdengar jelas.");
       }
 
-      // Perbarui state entries
+      // Perbarui state entries dengan pencatatan kuota
       const entry = state.entries.find(e => e.id === logbookId);
+      let newRemaining = 0;
       if (entry) {
+        const curMedia = (entry.wawancara_media && entry.wawancara_media[mIdx]) || {};
+        const prevAttempts = Number(curMedia.transcript_attempts !== undefined ? curMedia.transcript_attempts : (curMedia.transcript ? 1 : 0));
+        const newAttempts = Math.min(3, prevAttempts + 1);
+        newRemaining = Math.max(0, 3 - newAttempts);
+
         if (Array.isArray(entry.wawancara_media) && entry.wawancara_media[mIdx]) {
           entry.wawancara_media[mIdx].transcript = transcriptText;
+          entry.wawancara_media[mIdx].transcript_attempts = newAttempts;
         }
         if (Array.isArray(entry.recordings) && entry.recordings[mIdx]) {
           entry.recordings[mIdx].transcript = transcriptText;
+          entry.recordings[mIdx].transcript_attempts = newAttempts;
         }
         if (Array.isArray(entry.media_files) && entry.media_files[mIdx]) {
           entry.media_files[mIdx].transcript = transcriptText;
+          entry.media_files[mIdx].transcript_attempts = newAttempts;
         }
-        if (!entry.transcript) {
+        if (mIdx === 0 || !entry.transcript) {
           entry.transcript = transcriptText;
         }
 
@@ -2194,6 +2248,8 @@
               .doc(logbookId)
               .update({
                 wawancara_media: entry.wawancara_media || [],
+                recordings: entry.recordings || [],
+                media_files: entry.media_files || [],
                 transcript: entry.transcript || transcriptText,
                 updatedAt: new Date().toISOString()
               });
@@ -2206,13 +2262,40 @@
         }
       }
 
-      showToast("Transkrip wawancara berhasil dibuat dan disimpan!", "success");
+      showToast(`Transkrip wawancara berhasil disimpan! Sisa kuota berkas ini: ${newRemaining} kali.`, "success");
 
       // Tampilkan teks hasil transkrip
       const contentBox = document.getElementById(`transcriptContent_${logbookId}_${mIdx}`);
       const textBox = document.getElementById(`transcriptText_${logbookId}_${mIdx}`);
+      const editInput = document.getElementById(`transcriptEditInput_${logbookId}_${mIdx}`);
+      const viewMode = document.getElementById(`transcriptViewMode_${logbookId}_${mIdx}`);
+      const editMode = document.getElementById(`transcriptEditMode_${logbookId}_${mIdx}`);
+
       if (textBox) textBox.innerText = transcriptText;
+      if (editInput) editInput.value = transcriptText;
+      if (viewMode) viewMode.classList.remove("hidden");
+      if (editMode) editMode.classList.add("hidden");
       if (contentBox) contentBox.classList.remove("hidden");
+
+      // Perbarui tombol Transkrip Ulang & Teks Petunjuk Kuota
+      const retranscribeBtn = document.getElementById(`btnRetranscribe_${logbookId}_${mIdx}`);
+      const hintBox = document.getElementById(`transcriptHint_${logbookId}_${mIdx}`);
+
+      if (retranscribeBtn) {
+        if (newRemaining > 0) {
+          retranscribeBtn.disabled = false;
+          retranscribeBtn.textContent = `Transkrip Ulang (${newRemaining}x)`;
+          retranscribeBtn.setAttribute("onclick", `confirmReTranscription('${logbookId}', ${mIdx}, '${escapeHtml(fileId)}', '${escapeHtml(fileName || "")}', ${Number(fileSize || 0)}, ${newRemaining}, this)`);
+        } else {
+          retranscribeBtn.remove();
+        }
+      }
+
+      if (hintBox) {
+        hintBox.textContent = newRemaining > 0 
+          ? `Teks transkrip tersimpan aman di Cloud. Tersedia ${newRemaining} kali kuota transkrip ulang jika hasil terhapus atau rusak.` 
+          : `Batas kuota transkrip audio ini telah tercapai (3/3 kali). Gunakan tombol "Edit" untuk mengoreksi kata.`;
+      }
 
       // Perbarui tombol menjadi tombol buka/tutup transkrip
       const block = document.getElementById(`transcriptBlock_${logbookId}_${mIdx}`);
@@ -2301,9 +2384,117 @@
     }
   }
 
+  window.enterEditTranscript = function(logbookId, mIdx) {
+    const viewMode = document.getElementById(`transcriptViewMode_${logbookId}_${mIdx}`);
+    const editMode = document.getElementById(`transcriptEditMode_${logbookId}_${mIdx}`);
+    const textBox = document.getElementById(`transcriptText_${logbookId}_${mIdx}`);
+    const editInput = document.getElementById(`transcriptEditInput_${logbookId}_${mIdx}`);
+    if (viewMode && editMode && editInput) {
+      if (textBox) {
+        editInput.value = textBox.innerText || "";
+      }
+      viewMode.classList.add("hidden");
+      editMode.classList.remove("hidden");
+      editInput.focus();
+    }
+  };
+
+  window.cancelEditTranscript = function(logbookId, mIdx) {
+    const viewMode = document.getElementById(`transcriptViewMode_${logbookId}_${mIdx}`);
+    const editMode = document.getElementById(`transcriptEditMode_${logbookId}_${mIdx}`);
+    const textBox = document.getElementById(`transcriptText_${logbookId}_${mIdx}`);
+    const editInput = document.getElementById(`transcriptEditInput_${logbookId}_${mIdx}`);
+    if (viewMode && editMode) {
+      if (editInput && textBox) {
+        editInput.value = textBox.innerText || "";
+      }
+      editMode.classList.add("hidden");
+      viewMode.classList.remove("hidden");
+    }
+  };
+
+  window.saveEditedTranscriptExplicit = async function(logbookId, mIdx, btnElement) {
+    const editInput = document.getElementById(`transcriptEditInput_${logbookId}_${mIdx}`);
+    const textBox = document.getElementById(`transcriptText_${logbookId}_${mIdx}`);
+    const viewMode = document.getElementById(`transcriptViewMode_${logbookId}_${mIdx}`);
+    const editMode = document.getElementById(`transcriptEditMode_${logbookId}_${mIdx}`);
+    if (!editInput) return;
+
+    const newText = (editInput.value || "").trim();
+    if (!newText) {
+      showToast("Teks transkrip tidak boleh kosong.", "warning");
+      return;
+    }
+
+    const entry = state.entries.find(e => e.id === logbookId);
+    if (!entry) return;
+
+    const originalBtnText = btnElement ? btnElement.textContent : "Simpan";
+    if (btnElement) {
+      btnElement.disabled = true;
+      btnElement.textContent = "Menyimpan...";
+    }
+
+    // 1. Perbarui state memori
+    if (Array.isArray(entry.wawancara_media) && entry.wawancara_media[mIdx]) {
+      entry.wawancara_media[mIdx].transcript = newText;
+    }
+    if (Array.isArray(entry.recordings) && entry.recordings[mIdx]) {
+      entry.recordings[mIdx].transcript = newText;
+    }
+    if (Array.isArray(entry.media_files) && entry.media_files[mIdx]) {
+      entry.media_files[mIdx].transcript = newText;
+    }
+    if (mIdx === 0 || !entry.transcript) {
+      entry.transcript = newText;
+    }
+
+    // 2. Simpan secara atomik ke Cloud Firestore
+    const user = window.AuthManager ? AuthManager.currentUser : null;
+    if (user && window.FirebaseService && FirebaseService.db) {
+      try {
+        await FirebaseService.db
+          .collection("users")
+          .doc(user.uid)
+          .collection("logbooks")
+          .doc(logbookId)
+          .update({
+            wawancara_media: entry.wawancara_media || [],
+            recordings: entry.recordings || [],
+            media_files: entry.media_files || [],
+            transcript: entry.transcript || newText,
+            updatedAt: new Date().toISOString()
+          });
+      } catch (e) {
+        console.warn("Gagal simpan koreksi transkrip ke Firestore:", e);
+        showToast("Peringatan: Gagal menyinkronkan ke Cloud.", "warning");
+      }
+    }
+    if (user) {
+      saveEntriesToLocalStorage(state.entries, user);
+    }
+
+    // 3. Perbarui teks di tampilan baca & kembalikan antarmuka ke mode baca
+    if (textBox) {
+      textBox.innerText = newText;
+    }
+    if (editMode && viewMode) {
+      editMode.classList.add("hidden");
+      viewMode.classList.remove("hidden");
+    }
+    if (btnElement) {
+      btnElement.disabled = false;
+      btnElement.textContent = originalBtnText;
+    }
+
+    showToast("Koreksi transkrip berhasil disimpan!", "success");
+  };
+
   window.saveEditedTranscript = async function(logbookId, mIdx, newText) {
-    // Transkrip bersifat read-only untuk melindungi integritas rekaman dan mencegah kehilangan data
-    console.warn("saveEditedTranscript dinonaktifkan: Transkrip read-only untuk keamanan data penelitian.");
+    // Kompatibilitas fungsi pemanggilan lama jika ada
+    if (newText) {
+      window.saveEditedTranscriptExplicit(logbookId, mIdx);
+    }
   };
 
   function renderExistingLogbookMedia(item) {

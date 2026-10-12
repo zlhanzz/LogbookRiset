@@ -8761,10 +8761,13 @@ textarea.form-control {
 .transcript-actions {
   display: flex;
   gap: 6px;
+  align-items: center;
 }
 
 .btn-copy-transcript,
-.btn-close-transcript {
+.btn-edit-transcript,
+.btn-close-transcript,
+.btn-cancel-transcript {
   background: #ffffff;
   border: 1px solid #cbd5e1;
   color: #334155;
@@ -8773,11 +8776,19 @@ textarea.form-control {
   font-weight: 600;
   border-radius: 4px;
   cursor: pointer;
+  transition: all 0.15s ease;
 }
 
-.btn-copy-transcript:hover {
+.btn-copy-transcript:hover,
+.btn-edit-transcript:hover,
+.btn-cancel-transcript:hover {
   background: #f1f5f9;
   color: #0f172a;
+}
+
+.btn-edit-transcript:hover {
+  color: #064e3b;
+  border-color: #064e3b;
 }
 
 .btn-copy-transcript.copied {
@@ -8785,6 +8796,71 @@ textarea.form-control {
   color: #064e3b;
   border-color: #a7f3d0;
   font-weight: 600;
+}
+
+.btn-save-transcript {
+  background: #064e3b;
+  border: 1px solid #064e3b;
+  color: #ffffff;
+  padding: 3px 10px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-save-transcript:hover {
+  background: #04382a;
+}
+
+.btn-save-transcript:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-retranscribe {
+  background: #fef3c7;
+  border: 1px solid #f59e0b;
+  color: #92400e;
+  padding: 4px 10px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.btn-retranscribe:hover {
+  background: #fde68a;
+  color: #78350f;
+}
+
+.btn-retranscribe:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.transcript-footer-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.transcript-quota-pill {
+  background: #ecfdf5;
+  color: #064e3b;
+  border: 1px solid #a7f3d0;
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 12px;
+  margin-left: 6px;
 }
 
 .btn-close-transcript:hover {
@@ -8810,9 +8886,31 @@ textarea.form-control {
   cursor: text;
 }
 
+.transcript-edit-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  font-family: inherit;
+  font-size: 0.85rem;
+  line-height: 1.6;
+  color: #0f172a;
+  background: #ffffff;
+  border: 1.5px solid #064e3b;
+  border-radius: 6px;
+  padding: 10px 12px;
+  outline: none;
+  resize: vertical;
+  min-height: 120px;
+  max-height: 320px;
+  margin-top: 2px;
+}
+
+.transcript-edit-textarea:focus {
+  box-shadow: 0 0 0 2px rgba(6, 78, 59, 0.15);
+}
+
 .transcript-hint {
   font-size: 0.72rem;
   color: #64748b;
-  margin-top: 6px;
   line-height: 1.4;
+  flex: 1 1 180px;
 }
