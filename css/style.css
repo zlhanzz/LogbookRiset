@@ -8749,6 +8749,13 @@ textarea.form-control {
   color: #0f172a;
 }
 
+.btn-copy-transcript.copied {
+  background: #ecfdf5;
+  color: #064e3b;
+  border-color: #a7f3d0;
+  font-weight: 600;
+}
+
 .btn-close-transcript:hover {
   background: #fee2e2;
   color: #991b1b;
@@ -8762,21 +8769,19 @@ textarea.form-control {
   max-height: 220px;
   overflow-y: auto;
   white-space: pre-wrap;
-  padding: 8px;
-  background: #ffffff;
+  padding: 10px 12px;
+  background: #f8fafc;
   border: 1px solid #e2e8f0;
-  border-radius: 4px;
+  border-radius: 6px;
   outline: none;
-}
-
-.transcript-text:focus {
-  border-color: #064e3b;
-  box-shadow: 0 0 0 1px #064e3b;
+  user-select: text;
+  -webkit-user-select: text;
+  cursor: text;
 }
 
 .transcript-hint {
-  font-size: 0.7rem;
+  font-size: 0.72rem;
   color: #64748b;
   margin-top: 6px;
-  font-style: italic;
+  line-height: 1.4;
 }

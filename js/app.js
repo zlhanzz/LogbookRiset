@@ -1816,12 +1816,12 @@
                 <div class="transcript-header-row">
                   <span class="transcript-title">Transkrip Percakapan:</span>
                   <div class="transcript-actions">
-                    <button type="button" class="btn-copy-transcript" onclick="copyTranscriptText('${entry.id}', ${mIdx})">Salin Teks</button>
+                    <button type="button" class="btn-copy-transcript" onclick="copyTranscriptText('${entry.id}', ${mIdx}, this)">Salin Teks</button>
                     <button type="button" class="btn-close-transcript" onclick="toggleTranscriptView('${entry.id}', ${mIdx})">Tutup</button>
                   </div>
                 </div>
-                <div class="transcript-text" id="transcriptText_${entry.id}_${mIdx}" contenteditable="true" onblur="saveEditedTranscript('${entry.id}', ${mIdx}, this.innerText)">${escapeHtml(transcript)}</div>
-                <div class="transcript-hint">Koreksi teks di atas otomatis tersimpan ke Cloud dan siap diekspor ke Word (.docx).</div>
+                <div class="transcript-text" id="transcriptText_${entry.id}_${mIdx}">${escapeHtml(transcript)}</div>
+                <div class="transcript-hint">Teks transkrip otomatis tersimpan aman di Cloud dan siap disalin atau diekspor ke Word (.docx).</div>
               </div>
             </div>
             ` : ""}
@@ -2232,7 +2232,7 @@
     }
   };
 
-  window.copyTranscriptText = function(logbookId, mIdx) {
+  window.copyTranscriptText = function(logbookId, mIdx, btnElement) {
     const textBox = document.getElementById(`transcriptText_${logbookId}_${mIdx}`);
     if (textBox) {
       const text = textBox.innerText || "";
@@ -2240,50 +2240,57 @@
         showToast("Teks transkrip masih kosong.", "info");
         return;
       }
-      navigator.clipboard.writeText(text).then(() => {
+
+      const btn = btnElement || document.querySelector(`#transcriptContent_${logbookId}_${mIdx} .btn-copy-transcript`);
+      const originalText = btn ? btn.textContent : "Salin Teks";
+
+      const handleSuccess = () => {
         showToast("Teks transkrip berhasil disalin ke papan klip!", "success");
-      }).catch(() => {
-        showToast("Gagal menyalin teks secara otomatis.", "warning");
-      });
+        if (btn) {
+          btn.textContent = "Tersalin!";
+          btn.classList.add("copied");
+          setTimeout(() => {
+            btn.textContent = originalText;
+            btn.classList.remove("copied");
+          }, 2000);
+        }
+      };
+
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(handleSuccess).catch(() => {
+          fallbackCopyText(text, handleSuccess);
+        });
+      } else {
+        fallbackCopyText(text, handleSuccess);
+      }
     }
   };
 
-  window.saveEditedTranscript = async function(logbookId, mIdx, newText) {
-    const cleanText = (newText || "").trim();
-    const entry = state.entries.find(e => e.id === logbookId);
-    if (!entry) return;
-
-    if (Array.isArray(entry.wawancara_media) && entry.wawancara_media[mIdx]) {
-      entry.wawancara_media[mIdx].transcript = cleanText;
-    }
-    if (Array.isArray(entry.recordings) && entry.recordings[mIdx]) {
-      entry.recordings[mIdx].transcript = cleanText;
-    }
-    if (Array.isArray(entry.media_files) && entry.media_files[mIdx]) {
-      entry.media_files[mIdx].transcript = cleanText;
-    }
-    entry.transcript = cleanText;
-
-    const user = window.AuthManager ? AuthManager.currentUser : null;
-    if (user && window.FirebaseService && FirebaseService.db) {
-      try {
-        await FirebaseService.db
-          .collection("users")
-          .doc(user.uid)
-          .collection("logbooks")
-          .doc(logbookId)
-          .update({
-            wawancara_media: entry.wawancara_media || [],
-            transcript: cleanText,
-            updatedAt: new Date().toISOString()
-          });
-      } catch (e) {
-        console.warn("Gagal simpan edit transkrip ke Firestore:", e);
+  function fallbackCopyText(text, onSuccess) {
+    try {
+      const tempArea = document.createElement("textarea");
+      tempArea.value = text;
+      tempArea.setAttribute("readonly", "");
+      tempArea.style.position = "fixed";
+      tempArea.style.top = "-9999px";
+      tempArea.style.left = "-9999px";
+      document.body.appendChild(tempArea);
+      tempArea.select();
+      const success = document.execCommand("copy");
+      document.body.removeChild(tempArea);
+      if (success) {
+        if (onSuccess) onSuccess();
+      } else {
+        showToast("Gagal menyalin otomatis. Silakan blok teks dan salin manual.", "warning");
       }
+    } catch (e) {
+      showToast("Gagal menyalin teks secara otomatis.", "warning");
     }
-    if (user) {
-      saveEntriesToLocalStorage(state.entries, user);
-    }
+  }
+
+  window.saveEditedTranscript = async function(logbookId, mIdx, newText) {
+    // Transkrip bersifat read-only untuk melindungi integritas rekaman dan mencegah kehilangan data
+    console.warn("saveEditedTranscript dinonaktifkan: Transkrip read-only untuk keamanan data penelitian.");
   };
 
   function renderExistingLogbookMedia(item) {
