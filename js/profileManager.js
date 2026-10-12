@@ -126,15 +126,21 @@ const ProfileManager = {
   },
 
   /**
-   * Helper Normalisasi Kunci Nama Wilayah
-   * Menghilangkan sensitivitas prefix ("Kab.", "Kec.", "Desa", "Dusun"), spasi ganda, dan case
+   * Helper Normalisasi Kunci Nama Wilayah (Bulletproof Tolerant Cleansing)
+   * Mengantisipasi:
+   * 1. Perbedaan Huruf Besar & Kecil (case-insensitive: "BANDUNG" vs "bandung")
+   * 2. Perbedaan Spasi (spasi di awal/akhir, spasi ganda, spasi tab: "  Kabupaten   Bandung  ")
+   * 3. Prefix Manual ("Kab.", "Kab", "Kabupaten", "Kota", "Kota.") baik dengan spasi maupun tanpa spasi ("Kab.Bandung")
+   * 4. Tanda baca ekstra (seperti titik di akhir: "Kab. Bandung.")
    */
   normalizeKabKey(str) {
     if (!str) return "";
     return String(str)
       .toLowerCase()
-      .replace(/^(kabupaten|kab\.?|kota)\s+/i, "")
+      .trim()
       .replace(/\s+/g, " ")
+      .replace(/^(kabupaten\.?\s*|kab\.?\s*|kota\.?\s*)/i, "")
+      .replace(/\.+$/, "")
       .trim();
   },
 
@@ -142,8 +148,10 @@ const ProfileManager = {
     if (!str) return "";
     return String(str)
       .toLowerCase()
-      .replace(/^(kecamatan|kec\.?)\s+/i, "")
+      .trim()
       .replace(/\s+/g, " ")
+      .replace(/^(kecamatan\.?\s*|kec\.?\s*)/i, "")
+      .replace(/\.+$/, "")
       .trim();
   },
 
@@ -151,8 +159,10 @@ const ProfileManager = {
     if (!str) return "";
     return String(str)
       .toLowerCase()
-      .replace(/^(desa|kelurahan|kel\.?|ds\.?)\s+/i, "")
+      .trim()
       .replace(/\s+/g, " ")
+      .replace(/^(desa\.?\s*|kelurahan\.?\s*|kel\.?\s*|ds\.?\s*)/i, "")
+      .replace(/\.+$/, "")
       .trim();
   },
 
@@ -160,8 +170,10 @@ const ProfileManager = {
     if (!str) return "";
     return String(str)
       .toLowerCase()
-      .replace(/^(dusun|dsn\.?|lingkungan|lingk\.?)\s+/i, "")
+      .trim()
       .replace(/\s+/g, " ")
+      .replace(/^(dusun\.?\s*|dsn\.?\s*|lingkungan\.?\s*|lingk\.?\s*)/i, "")
+      .replace(/\.+$/, "")
       .trim();
   },
 
