@@ -5573,6 +5573,37 @@ textarea.form-control {
   color: var(--color-danger, #ef4444);
 }
 
+/* Tombol Sub-Aksi Hirarki Wilayah (+ Kecamatan, + Desa/Kelurahan, + Dusun) */
+.btn-tree-sub-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  background: #ffffff;
+  border: 1.5px solid var(--color-primary, #064e3b);
+  color: var(--color-primary-dark, #064e3b);
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+  line-height: 1.3;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.btn-tree-sub-action:hover {
+  background: #ecfdf5;
+  color: #064e3b;
+  border-color: #064e3b;
+  box-shadow: 0 1px 3px rgba(6, 78, 59, 0.15);
+}
+
+.btn-tree-sub-action:active {
+  transform: translateY(1px);
+}
+
 /* ==========================================================================
    KOMPONEN TAB NAVIGASI RUANG KERJA (DASHBOARD & MEDIA)
    ========================================================================== */

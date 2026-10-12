@@ -984,9 +984,11 @@
       const tgl = String(item.tanggal || "").trim();
       if (!kab || !tgl || kab === "-" || tgl === "-") return false;
 
-      // Filter Wilayah
+      // Filter Wilayah (Toleran titik & case kanonikal)
       if (state.activeKabupaten !== "all") {
-        if (item.kabupaten.toLowerCase() !== state.activeKabupaten.toLowerCase()) {
+        const itemKabKey = window.ProfileManager ? ProfileManager.normalizeKabKey(item.kabupaten) : item.kabupaten.toLowerCase();
+        const activeKabKey = window.ProfileManager ? ProfileManager.normalizeKabKey(state.activeKabupaten) : state.activeKabupaten.toLowerCase();
+        if (itemKabKey !== activeKabKey) {
           return false;
         }
       }
@@ -1027,8 +1029,8 @@
     // 2. Statistik
     if (DOM.statTotal) DOM.statTotal.textContent = state.entries.length;
     if (DOM.statWilayah) {
-      const uniqueWilayah = new Set(state.entries.map(e => e.kabupaten).filter(Boolean));
-      DOM.statWilayah.textContent = uniqueWilayah.size;
+      const uniqueWilayahKeys = new Set(state.entries.map(e => window.ProfileManager ? ProfileManager.normalizeKabKey(e.kabupaten) : (e.kabupaten || "").toLowerCase()).filter(Boolean));
+      DOM.statWilayah.textContent = uniqueWilayahKeys.size;
     }
     if (DOM.statCategoryCount) {
       const uniqueCats = new Set(state.entries.map(e => e.jenisKegiatan).filter(Boolean));
@@ -1060,10 +1062,18 @@
   function renderKabupatenPills() {
     if (!DOM.kabupatenPills) return;
 
-    // Ambil kabupaten dari profil atau dari catatan logbook
+    // Ambil kabupaten dari profil atau dari catatan logbook dengan deduplikasi kanonikal
     const profKab = window.ProfileManager ? ProfileManager.getRegisteredKabupatens() : [];
     const entriesKab = state.entries.map(e => e.kabupaten).filter(Boolean);
-    const allKab = [...new Set([...profKab, ...entriesKab])];
+
+    const kabMap = new Map();
+    [...profKab, ...entriesKab].forEach(k => {
+      const key = window.ProfileManager ? ProfileManager.normalizeKabKey(k) : k.toLowerCase();
+      if (!kabMap.has(key)) {
+        kabMap.set(key, k);
+      }
+    });
+    const allKab = Array.from(kabMap.values());
 
     DOM.kabupatenPills.innerHTML = "";
 
@@ -1075,10 +1085,13 @@
     DOM.kabupatenPills.appendChild(allBtn);
 
     allKab.forEach(k => {
+      const activeKey = window.ProfileManager ? ProfileManager.normalizeKabKey(state.activeKabupaten) : state.activeKabupaten.toLowerCase();
+      const currentKey = window.ProfileManager ? ProfileManager.normalizeKabKey(k) : k.toLowerCase();
       const btn = document.createElement("button");
-      btn.className = `pill-btn ${state.activeKabupaten.toLowerCase() === k.toLowerCase() ? "active" : ""}`;
+      btn.className = `pill-btn ${activeKey === currentKey ? "active" : ""}`;
       btn.dataset.kabupaten = k;
-      btn.textContent = `Kab. ${k}`;
+      const cleanLabel = k.toLowerCase().startsWith("kab") || k.toLowerCase().startsWith("kota") ? k : `Kab. ${k}`;
+      btn.textContent = cleanLabel;
       DOM.kabupatenPills.appendChild(btn);
     });
   }
@@ -4164,15 +4177,29 @@
           return;
         }
       }
-      await ProfileManager.addLocationEntry({ provinsi: prov, kabupaten: effectiveKab, kecamatan: kec, desa, dusun }, user);
-      showToast(`Wilayah ${effectiveKab} berhasil disimpan.`, "success");
+      const res = await ProfileManager.addLocationEntry({ provinsi: prov, kabupaten: effectiveKab, kecamatan: kec, desa, dusun }, user);
+      if (res && res.status === "exact_duplicate") {
+        showToast("Wilayah penelitian tersebut sudah terdaftar sebelumnya.", "info");
+      } else if (res && res.status === "merged_kec") {
+        showToast(`Kecamatan ${res.kecamatan} berhasil dilebur ke ${res.kabupaten}.`, "success");
+      } else if (res && res.status === "merged_desa") {
+        showToast(`Desa ${res.desa} berhasil dilebur ke Kec. ${res.kecamatan}.`, "success");
+      } else if (res && res.status === "merged_dusun") {
+        showToast(`Dusun ${res.dusun} berhasil ditambahkan ke Desa ${res.desa}.`, "success");
+      } else {
+        showToast(`Wilayah ${effectiveKab} berhasil disimpan.`, "success");
+      }
     } else if (mode === "add-kec") {
       if (!kec) {
         showToast("Nama Kecamatan belum diisi.", "info");
         return;
       }
-      await ProfileManager.addLocationEntry({ provinsi: prov, kabupaten: kab, kecamatan: kec, desa, dusun }, user);
-      showToast(`Kecamatan ${kec} ditambahkan ke ${kab}.`, "success");
+      const res = await ProfileManager.addLocationEntry({ provinsi: prov, kabupaten: kab, kecamatan: kec, desa, dusun }, user);
+      if (res && res.status === "exact_duplicate") {
+        showToast("Kecamatan tersebut sudah terdaftar di kabupaten ini.", "info");
+      } else {
+        showToast(`Kecamatan ${kec} ditambahkan ke ${kab}.`, "success");
+      }
     } else if (mode === "add-desa") {
       if (!desa) {
         showToast("Nama Desa/Kelurahan belum diisi.", "info");
@@ -4189,7 +4216,6 @@
       await ProfileManager.addDusun(kabIdx, kecIdx, targetDesaIdx, dusun, user);
       showToast(`Dusun ${dusun} ditambahkan.`, "success");
     }
-
 
     renderLocationTree();
     refreshFormLocations();

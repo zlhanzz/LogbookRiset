@@ -126,8 +126,48 @@ const ProfileManager = {
   },
 
   /**
+   * Helper Normalisasi Kunci Nama Wilayah
+   * Menghilangkan sensitivitas prefix ("Kab.", "Kec.", "Desa", "Dusun"), spasi ganda, dan case
+   */
+  normalizeKabKey(str) {
+    if (!str) return "";
+    return String(str)
+      .toLowerCase()
+      .replace(/^(kabupaten|kab\.?|kota)\s+/i, "")
+      .replace(/\s+/g, " ")
+      .trim();
+  },
+
+  normalizeKecKey(str) {
+    if (!str) return "";
+    return String(str)
+      .toLowerCase()
+      .replace(/^(kecamatan|kec\.?)\s+/i, "")
+      .replace(/\s+/g, " ")
+      .trim();
+  },
+
+  normalizeDesaKey(str) {
+    if (!str) return "";
+    return String(str)
+      .toLowerCase()
+      .replace(/^(desa|kelurahan|kel\.?|ds\.?)\s+/i, "")
+      .replace(/\s+/g, " ")
+      .trim();
+  },
+
+  normalizeDusunKey(str) {
+    if (!str) return "";
+    return String(str)
+      .toLowerCase()
+      .replace(/^(dusun|dsn\.?|lingkungan|lingk\.?)\s+/i, "")
+      .replace(/\s+/g, " ")
+      .trim();
+  },
+
+  /**
    * Rekonstruksi Pohon Visual (Tree Representation) dari Data Flat
-   * Untuk kemudahan render bertingkat di UI Builder
+   * Untuk kemudahan render bertingkat di UI Builder dengan peleburan otomatis
    */
   getTreeLocations() {
     if (!this.currentProfile || !Array.isArray(this.currentProfile.locations)) return [];
@@ -144,7 +184,8 @@ const ProfileManager = {
 
       if (!kabName) return;
 
-      let kabObj = kabMap.get(kabName.toLowerCase());
+      const kabKey = this.normalizeKabKey(kabName);
+      let kabObj = kabMap.get(kabKey);
       if (!kabObj) {
         kabObj = {
           provinsi: prov,
@@ -152,7 +193,7 @@ const ProfileManager = {
           kecamatans: [],
           _kecMap: new Map()
         };
-        kabMap.set(kabName.toLowerCase(), kabObj);
+        kabMap.set(kabKey, kabObj);
         tree.push(kabObj);
       } else if (prov && (!kabObj.provinsi || kabObj.provinsi === "Provinsi Riset")) {
         kabObj.provinsi = prov;
@@ -160,31 +201,36 @@ const ProfileManager = {
 
       if (!kecName) return;
 
-      let kecObj = kabObj._kecMap.get(kecName.toLowerCase());
+      const kecKey = this.normalizeKecKey(kecName);
+      let kecObj = kabObj._kecMap.get(kecKey);
       if (!kecObj) {
         kecObj = {
           name: kecName,
           desas: [],
           _desaMap: new Map()
         };
-        kabObj._kecMap.set(kecName.toLowerCase(), kecObj);
+        kabObj._kecMap.set(kecKey, kecObj);
         kabObj.kecamatans.push(kecObj);
       }
 
       if (!desaName) return;
 
-      let desaObj = kecObj._desaMap.get(desaName.toLowerCase());
+      const desaKey = this.normalizeDesaKey(desaName);
+      let desaObj = kecObj._desaMap.get(desaKey);
       if (!desaObj) {
         desaObj = {
           name: desaName,
           dusuns: []
         };
-        kecObj._desaMap.set(desaName.toLowerCase(), desaObj);
+        kecObj._desaMap.set(desaKey, desaObj);
         kecObj.desas.push(desaObj);
       }
 
-      if (dusunName && !desaObj.dusuns.some(d => d.toLowerCase() === dusunName.toLowerCase())) {
-        desaObj.dusuns.push(dusunName);
+      if (dusunName) {
+        const dusunKey = this.normalizeDusunKey(dusunName);
+        if (!desaObj.dusuns.some(d => this.normalizeDusunKey(d) === dusunKey)) {
+          desaObj.dusuns.push(dusunName);
+        }
       }
     });
 
@@ -471,63 +517,49 @@ const ProfileManager = {
   /**
    * Mendapatkan daftar nama Kabupaten terdaftar dari profil (Array unik)
    */
+  /**
+   * Mendapatkan daftar nama Kabupaten terdaftar dari profil (Array unik berbasis pohon visual)
+   */
   getRegisteredKabupatens() {
     if (!this.currentProfile || !Array.isArray(this.currentProfile.locations)) return [];
-    const list = this.currentProfile.locations
-      .map(loc => (loc.kabupaten ? String(loc.kabupaten).trim() : ""))
-      .filter(Boolean);
-    return Array.from(new Set(list));
+    const tree = this.getTreeLocations();
+    return tree.map(k => k.kabupaten);
   },
 
   /**
-   * Mendapatkan daftar objek Kecamatan untuk suatu Kabupaten
+   * Mendapatkan daftar objek Kecamatan untuk suatu Kabupaten (Toleran prefix & case)
    */
   getRegisteredKecamatans(kabupatenName) {
     if (!kabupatenName || !this.currentProfile || !Array.isArray(this.currentProfile.locations)) return [];
-    const kabLower = String(kabupatenName).trim().toLowerCase();
-    const matching = this.currentProfile.locations.filter(
-      loc => String(loc.kabupaten || "").trim().toLowerCase() === kabLower
-    );
-    const kecNames = Array.from(new Set(
-      matching.map(loc => (loc.kecamatan ? String(loc.kecamatan).trim() : "")).filter(Boolean)
-    ));
-    return kecNames.map(name => ({ name }));
+    const kabKey = this.normalizeKabKey(kabupatenName);
+    const kabObj = this.getTreeLocations().find(k => this.normalizeKabKey(k.kabupaten) === kabKey);
+    return kabObj ? kabObj.kecamatans.map(kec => ({ name: kec.name })) : [];
   },
 
   /**
-   * Mendapatkan daftar nama Desa untuk suatu Kabupaten dan Kecamatan
+   * Mendapatkan daftar nama Desa untuk suatu Kabupaten dan Kecamatan (Toleran prefix & case)
    */
   getRegisteredDesas(kabupatenName, kecamatanName) {
     if (!kabupatenName || !kecamatanName || !this.currentProfile || !Array.isArray(this.currentProfile.locations)) return [];
-    const kabLower = String(kabupatenName).trim().toLowerCase();
-    const kecLower = String(kecamatanName).trim().toLowerCase();
-    const matching = this.currentProfile.locations.filter(
-      loc => String(loc.kabupaten || "").trim().toLowerCase() === kabLower &&
-             String(loc.kecamatan || "").trim().toLowerCase() === kecLower
-    );
-    const desaNames = Array.from(new Set(
-      matching.map(loc => (loc.desa ? String(loc.desa).trim() : "")).filter(Boolean)
-    ));
-    return desaNames;
+    const kabKey = this.normalizeKabKey(kabupatenName);
+    const kecKey = this.normalizeKecKey(kecamatanName);
+    const kabObj = this.getTreeLocations().find(k => this.normalizeKabKey(k.kabupaten) === kabKey);
+    const kecObj = kabObj ? kabObj.kecamatans.find(k => this.normalizeKecKey(k.name) === kecKey) : null;
+    return kecObj ? kecObj.desas.map(d => (d && d.name ? d.name : d)) : [];
   },
 
   /**
-   * Mendapatkan daftar nama Dusun untuk suatu Desa (Opsional)
+   * Mendapatkan daftar nama Dusun untuk suatu Desa (Toleran prefix & case)
    */
   getRegisteredDusuns(kabupatenName, kecamatanName, desaName) {
     if (!kabupatenName || !kecamatanName || !desaName || !this.currentProfile || !Array.isArray(this.currentProfile.locations)) return [];
-    const kabLower = String(kabupatenName).trim().toLowerCase();
-    const kecLower = String(kecamatanName).trim().toLowerCase();
-    const desaLower = String(desaName).trim().toLowerCase();
-    const matching = this.currentProfile.locations.filter(
-      loc => String(loc.kabupaten || "").trim().toLowerCase() === kabLower &&
-             String(loc.kecamatan || "").trim().toLowerCase() === kecLower &&
-             String(loc.desa || "").trim().toLowerCase() === desaLower
-    );
-    const dusunNames = Array.from(new Set(
-      matching.map(loc => (loc.dusun ? String(loc.dusun).trim() : "")).filter(Boolean)
-    ));
-    return dusunNames;
+    const kabKey = this.normalizeKabKey(kabupatenName);
+    const kecKey = this.normalizeKecKey(kecamatanName);
+    const desaKey = this.normalizeDesaKey(desaName);
+    const kabObj = this.getTreeLocations().find(k => this.normalizeKabKey(k.kabupaten) === kabKey);
+    const kecObj = kabObj ? kabObj.kecamatans.find(k => this.normalizeKecKey(k.name) === kecKey) : null;
+    const desaObj = kecObj ? kecObj.desas.find(d => this.normalizeDesaKey(d && d.name ? d.name : d) === desaKey) : null;
+    return desaObj && Array.isArray(desaObj.dusuns) ? desaObj.dusuns : [];
   },
 
   /**
@@ -546,7 +578,7 @@ const ProfileManager = {
 
   /**
    * Tambah Entri Wilayah Lengkap (Flat Normalized 5-Level Schema)
-   * Menyimpan langsung ke Cache dan Cloud Firestore (Zero Data Loss)
+   * Dilengkapi Smart Auto-Merge & Name Alignment (Zero Data Loss)
    */
   async addLocationEntry({ provinsi, kabupaten, kecamatan, desa, dusun }, user) {
     if (!this.currentProfile) this.currentProfile = { ...this.defaultProfile };
@@ -560,86 +592,173 @@ const ProfileManager = {
 
     if (!kabClean) return false;
 
-    // 1. Cek apakah record persis sama sudah ada
-    const existingExact = this.currentProfile.locations.find(l =>
-      String(l.kabupaten || "").toLowerCase() === kabClean.toLowerCase() &&
-      String(l.kecamatan || "").toLowerCase() === kecClean.toLowerCase() &&
-      String(l.desa || "").toLowerCase() === desaClean.toLowerCase() &&
-      String(l.dusun || "").toLowerCase() === dusunClean.toLowerCase()
+    const kabKey = this.normalizeKabKey(kabClean);
+    const kecKey = this.normalizeKecKey(kecClean);
+    const desaKey = this.normalizeDesaKey(desaClean);
+    const dusunKey = this.normalizeDusunKey(dusunClean);
+
+    // 1. Cek apakah ada Kabupaten yang cocok secara kanonikal
+    const matchedKabEntry = this.currentProfile.locations.find(l =>
+      this.normalizeKabKey(l.kabupaten) === kabKey
     );
 
-    if (existingExact) {
-      if (provClean && (!existingExact.provinsi || existingExact.provinsi === "Provinsi Riset")) {
-        existingExact.provinsi = provClean;
+    // Selaraskan penulisan nama kabupaten & provinsi jika kabupaten sudah ada
+    const effectiveKab = matchedKabEntry ? matchedKabEntry.kabupaten : kabClean;
+    const effectiveProv = matchedKabEntry ? (matchedKabEntry.provinsi || provClean) : provClean;
+
+    // 2. Cek apakah ada Kecamatan yang cocok secara kanonikal di kabupaten tersebut
+    let matchedKecEntry = null;
+    if (kecKey && matchedKabEntry) {
+      matchedKecEntry = this.currentProfile.locations.find(l =>
+        this.normalizeKabKey(l.kabupaten) === kabKey &&
+        this.normalizeKecKey(l.kecamatan) === kecKey
+      );
+    }
+    const effectiveKec = matchedKecEntry ? matchedKecEntry.kecamatan : kecClean;
+
+    // 3. Cek apakah ada Desa yang cocok secara kanonikal di kecamatan tersebut
+    let matchedDesaEntry = null;
+    if (desaKey && matchedKecEntry) {
+      matchedDesaEntry = this.currentProfile.locations.find(l =>
+        this.normalizeKabKey(l.kabupaten) === kabKey &&
+        this.normalizeKecKey(l.kecamatan) === kecKey &&
+        this.normalizeDesaKey(l.desa) === desaKey
+      );
+    }
+    const effectiveDesa = matchedDesaEntry ? matchedDesaEntry.desa : desaClean;
+    const effectiveDusun = dusunClean;
+
+    // 4. Cek Duplikat Persis 100% (Exact Duplicate)
+    const exactMatch = this.currentProfile.locations.find(l =>
+      this.normalizeKabKey(l.kabupaten) === kabKey &&
+      this.normalizeKecKey(l.kecamatan) === kecKey &&
+      this.normalizeDesaKey(l.desa) === desaKey &&
+      this.normalizeDusunKey(l.dusun) === dusunKey
+    );
+
+    if (exactMatch) {
+      if (provClean && (!exactMatch.provinsi || exactMatch.provinsi === "Provinsi Riset")) {
+        exactMatch.provinsi = provClean;
       }
       await this.syncLocationsToStorageAndRemote(user);
-      return true;
+      return {
+        success: true,
+        status: "exact_duplicate",
+        kabupaten: effectiveKab,
+        kecamatan: effectiveKec,
+        desa: effectiveDesa,
+        dusun: effectiveDusun
+      };
     }
 
-    // 2. Jika menambah dusun, dan sudah ada entri desa tanpa dusun (dusun: ""), gunakan entri tersebut
-    if (dusunClean) {
+    // 5. Cek apakah ada placeholder dusun kosong (Dusun ditambahkan ke entri desa yang dusunnya masih kosong)
+    if (dusunClean && desaKey) {
       const blankDusunEntry = this.currentProfile.locations.find(l =>
-        String(l.kabupaten || "").toLowerCase() === kabClean.toLowerCase() &&
-        String(l.kecamatan || "").toLowerCase() === kecClean.toLowerCase() &&
-        String(l.desa || "").toLowerCase() === desaClean.toLowerCase() &&
+        this.normalizeKabKey(l.kabupaten) === kabKey &&
+        this.normalizeKecKey(l.kecamatan) === kecKey &&
+        this.normalizeDesaKey(l.desa) === desaKey &&
         !String(l.dusun || "").trim()
       );
       if (blankDusunEntry) {
-        blankDusunEntry.dusun = dusunClean;
-        if (provClean) blankDusunEntry.provinsi = provClean;
+        blankDusunEntry.dusun = effectiveDusun;
+        blankDusunEntry.provinsi = effectiveProv;
+        blankDusunEntry.kabupaten = effectiveKab;
+        blankDusunEntry.kecamatan = effectiveKec;
+        blankDusunEntry.desa = effectiveDesa;
         await this.syncLocationsToStorageAndRemote(user);
-        return true;
+        return {
+          success: true,
+          status: "merged_dusun",
+          kabupaten: effectiveKab,
+          kecamatan: effectiveKec,
+          desa: effectiveDesa,
+          dusun: effectiveDusun
+        };
       }
     }
 
-    // 3. Jika menambah kecamatan/desa ke placeholder kabupaten kosong
+    // 6. Cek apakah ada placeholder desa kosong (Desa ditambahkan ke entri kecamatan yang desanya masih kosong)
+    if (desaClean && kecKey) {
+      const blankDesaEntry = this.currentProfile.locations.find(l =>
+        this.normalizeKabKey(l.kabupaten) === kabKey &&
+        this.normalizeKecKey(l.kecamatan) === kecKey &&
+        !String(l.desa || "").trim() &&
+        !String(l.dusun || "").trim()
+      );
+      if (blankDesaEntry) {
+        blankDesaEntry.desa = effectiveDesa;
+        blankDesaEntry.dusun = effectiveDusun;
+        blankDesaEntry.provinsi = effectiveProv;
+        blankDesaEntry.kabupaten = effectiveKab;
+        blankDesaEntry.kecamatan = effectiveKec;
+        await this.syncLocationsToStorageAndRemote(user);
+        return {
+          success: true,
+          status: "merged_desa",
+          kabupaten: effectiveKab,
+          kecamatan: effectiveKec,
+          desa: effectiveDesa,
+          dusun: effectiveDusun
+        };
+      }
+    }
+
+    // 7. Cek apakah ada placeholder kecamatan kosong (Kecamatan ditambahkan ke entri kabupaten yang kecamatannya masih kosong)
     if (kecClean) {
       const blankKecEntry = this.currentProfile.locations.find(l =>
-        String(l.kabupaten || "").toLowerCase() === kabClean.toLowerCase() &&
+        this.normalizeKabKey(l.kabupaten) === kabKey &&
         !String(l.kecamatan || "").trim() &&
         !String(l.desa || "").trim() &&
         !String(l.dusun || "").trim()
       );
       if (blankKecEntry) {
-        blankKecEntry.kecamatan = kecClean;
-        blankKecEntry.desa = desaClean;
-        blankKecEntry.dusun = dusunClean;
-        if (provClean) blankKecEntry.provinsi = provClean;
+        blankKecEntry.kecamatan = effectiveKec;
+        blankKecEntry.desa = effectiveDesa;
+        blankKecEntry.dusun = effectiveDusun;
+        blankKecEntry.provinsi = effectiveProv;
+        blankKecEntry.kabupaten = effectiveKab;
         await this.syncLocationsToStorageAndRemote(user);
-        return true;
+        return {
+          success: true,
+          status: "merged_kec",
+          kabupaten: effectiveKab,
+          kecamatan: effectiveKec,
+          desa: effectiveDesa,
+          dusun: effectiveDusun
+        };
       }
     }
 
-    // 4. Jika menambah desa ke placeholder kecamatan kosong
-    if (desaClean) {
-      const blankDesaEntry = this.currentProfile.locations.find(l =>
-        String(l.kabupaten || "").toLowerCase() === kabClean.toLowerCase() &&
-        String(l.kecamatan || "").toLowerCase() === kecClean.toLowerCase() &&
-        !String(l.desa || "").trim() &&
-        !String(l.dusun || "").trim()
-      );
-      if (blankDesaEntry) {
-        blankDesaEntry.desa = desaClean;
-        blankDesaEntry.dusun = dusunClean;
-        if (provClean) blankDesaEntry.provinsi = provClean;
-        await this.syncLocationsToStorageAndRemote(user);
-        return true;
-      }
-    }
-
-    // 5. Tambah record baru
+    // 8. Tambah record baru dengan nama yang tersinkronisasi
     const newEntry = {
       id: `loc_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
-      provinsi: provClean,
-      kabupaten: kabClean,
-      kecamatan: kecClean,
-      desa: desaClean,
-      dusun: dusunClean
+      provinsi: effectiveProv,
+      kabupaten: effectiveKab,
+      kecamatan: effectiveKec,
+      desa: effectiveDesa,
+      dusun: effectiveDusun
     };
 
     this.currentProfile.locations.push(newEntry);
     await this.syncLocationsToStorageAndRemote(user);
-    return true;
+
+    let status = "new_kab";
+    if (matchedKabEntry && !matchedKecEntry && effectiveKec) {
+      status = "merged_kec";
+    } else if (matchedKecEntry && !matchedDesaEntry && effectiveDesa) {
+      status = "merged_desa";
+    } else if (matchedDesaEntry && effectiveDusun) {
+      status = "merged_dusun";
+    }
+
+    return {
+      success: true,
+      status,
+      kabupaten: effectiveKab,
+      kecamatan: effectiveKec,
+      desa: effectiveDesa,
+      dusun: effectiveDusun
+    };
   },
 
   /**
@@ -972,7 +1091,7 @@ const ProfileManager = {
           </span>
         </div>
         <div class="tree-header-actions" style="display: flex; gap: 6px; align-items: center;">
-          <button type="button" class="btn btn-light btn-sm btn-add-kec-action" data-kab-idx="${kabIndex}" title="Tambah Kecamatan">
+          <button type="button" class="btn btn-tree-sub-action btn-add-kec-action" data-kab-idx="${kabIndex}" title="Tambah Kecamatan ke ${kab.kabupaten}">
             + Kecamatan
           </button>
           <button type="button" class="btn-icon btn-remove-kab-action" data-kab-idx="${kabIndex}" data-kab-name="${kab.kabupaten}" title="Hapus Kabupaten Ini" style="color: var(--color-danger); width: 28px; height: 28px; font-size: 18px;">
@@ -1002,7 +1121,7 @@ const ProfileManager = {
               <strong style="color: var(--color-slate-800); font-size: 0.88rem;">${kec.name}</strong>
             </div>
             <div class="tree-header-actions" style="display: flex; gap: 6px; align-items: center;">
-              <button type="button" class="btn btn-light btn-sm btn-add-desa-action" data-kab-idx="${kabIndex}" data-kec-idx="${kecIndex}" style="font-size: 0.75rem; padding: 3px 8px;">
+              <button type="button" class="btn btn-tree-sub-action btn-add-desa-action" data-kab-idx="${kabIndex}" data-kec-idx="${kecIndex}" title="Tambah Desa ke Kec. ${kec.name}">
                 + Desa/Kelurahan
               </button>
               <button type="button" class="btn-icon btn-remove-kec-action" data-kab-idx="${kabIndex}" data-kec-idx="${kecIndex}" data-kec-name="${kec.name}" title="Hapus Kecamatan Ini" style="color: var(--color-danger); width: 24px; height: 24px; font-size: 16px;">
@@ -1038,7 +1157,7 @@ const ProfileManager = {
                   <div class="tree-desa-label">
                     <span class="desa-name-text">Desa/Kel. <strong>${desaObj.name}</strong></span>
                     <div class="tree-desa-actions" style="display: flex; gap: 4px; align-items: center;">
-                      <button type="button" class="btn-add-dusun-action btn-link-action" data-kab-idx="${kabIndex}" data-kec-idx="${kecIndex}" data-desa-idx="${desaIndex}" style="font-size: 0.72rem;">
+                      <button type="button" class="btn btn-tree-sub-action btn-add-dusun-action" data-kab-idx="${kabIndex}" data-kec-idx="${kecIndex}" data-desa-idx="${desaIndex}" title="Tambah Dusun ke Desa ${desaObj.name}">
                         + Dusun
                       </button>
                       <button type="button" class="btn-icon btn-remove-desa-action" data-kab-idx="${kabIndex}" data-kec-idx="${kecIndex}" data-desa-idx="${desaIndex}" data-desa-name="${desaObj.name}" title="Hapus Desa Ini" style="color: var(--color-danger); width: 20px; height: 20px; font-size: 15px;">
