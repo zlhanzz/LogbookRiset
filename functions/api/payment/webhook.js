@@ -97,3 +97,19 @@ export async function onRequestPost(context) {
     }
   });
 }
+
+/**
+ * Universal Catch-All Handler: Menangani seluruh metode HTTP (POST, PUT, PATCH, GET, OPTIONS, HEAD, dll.)
+ * Mencegah Cloudflare Pages menolak request gateway dengan status 405 Method Not Allowed jika gateway mengirim variasi metode.
+ */
+export async function onRequest(context) {
+  const method = ((context && context.request && context.request.method) || '').toUpperCase();
+  if (method === 'OPTIONS') {
+    return onRequestOptions();
+  }
+  if (method === 'GET' || method === 'HEAD') {
+    return onRequestGet();
+  }
+  return onRequestPost(context);
+}
+

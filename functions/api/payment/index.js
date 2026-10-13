@@ -6,7 +6,7 @@
 import { onRequestPost as handleCreate } from './create.js';
 import { onRequestGet as handleStatus } from './status.js';
 import { onRequestPost as handleSimulate } from './simulate.js';
-import { onRequestPost as handleWebhook } from './webhook.js';
+import { onRequest as handleWebhook } from './webhook.js';
 
 export async function onRequestOptions() {
   return new Response(null, {
