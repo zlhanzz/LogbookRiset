@@ -38,20 +38,25 @@ function detectMediaType(fileName, mimeType = '') {
 }
 
 async function getGoogleAccessToken(clientId, clientSecret, refreshToken) {
+  const cleanClientId = String(clientId || '').trim().replace(/^["']|["']$/g, '');
+  const cleanClientSecret = String(clientSecret || '').trim().replace(/^["']|["']$/g, '');
+  const cleanRefreshToken = String(refreshToken || '').trim().replace(/^["']|["']$/g, '');
+
   const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
-      client_id: clientId,
-      client_secret: clientSecret,
-      refresh_token: refreshToken,
+      client_id: cleanClientId,
+      client_secret: cleanClientSecret,
+      refresh_token: cleanRefreshToken,
       grant_type: 'refresh_token'
     })
   });
 
   if (!tokenRes.ok) {
     const errText = await tokenRes.text();
-    throw new Error(`Gagal memperbarui token Google Drive: ${errText}`);
+    const prefix = cleanRefreshToken ? `${cleanRefreshToken.substring(0, 10)}...${cleanRefreshToken.substring(cleanRefreshToken.length - 6)}` : 'empty';
+    throw new Error(`Gagal memperbarui token Google Drive (Active Token: ${prefix}): ${errText}`);
   }
 
   const tokenData = await tokenRes.json();
@@ -101,15 +106,20 @@ async function getOrCreateFolder(folderName, parentId, accessToken) {
 export async function onRequestPost(context) {
   const { request, env } = context;
 
-  // Konfigurasi Kredensial Google Drive dari Environment Variables (dengan toleransi alias nama)
-  const clientId = (env && (env.GOOGLE_DRIVE_CLIENT_ID || env.DRIVE_CLIENT_ID || env.RIVE_CLIENT_ID)) || 
+  // Konfigurasi Kredensial Google Drive dari Environment Variables (dengan toleransi alias nama dan sanitasi)
+  const rawClientId = (env && (env.GOOGLE_DRIVE_CLIENT_ID || env.DRIVE_CLIENT_ID || env.RIVE_CLIENT_ID)) || 
     (typeof process !== 'undefined' && process.env && (process.env.GOOGLE_DRIVE_CLIENT_ID || process.env.DRIVE_CLIENT_ID || process.env.RIVE_CLIENT_ID)) || '';
-  const clientSecret = (env && (env.GOOGLE_DRIVE_CLIENT_SECRET || env.DRIVE_CLIENT_SECRET || env.RIVE_CLIENT_SECRET)) || 
+  const rawClientSecret = (env && (env.GOOGLE_DRIVE_CLIENT_SECRET || env.DRIVE_CLIENT_SECRET || env.RIVE_CLIENT_SECRET)) || 
     (typeof process !== 'undefined' && process.env && (process.env.GOOGLE_DRIVE_CLIENT_SECRET || process.env.DRIVE_CLIENT_SECRET || process.env.RIVE_CLIENT_SECRET)) || '';
-  const refreshToken = (env && (env.GOOGLE_DRIVE_REFRESH_TOKEN || env.DRIVE_REFRESH_TOKEN || env.RIVE_REFRESH_TOKEN)) || 
+  const rawRefreshToken = (env && (env.GOOGLE_DRIVE_REFRESH_TOKEN || env.DRIVE_REFRESH_TOKEN || env.RIVE_REFRESH_TOKEN)) || 
     (typeof process !== 'undefined' && process.env && (process.env.GOOGLE_DRIVE_REFRESH_TOKEN || process.env.DRIVE_REFRESH_TOKEN || process.env.RIVE_REFRESH_TOKEN)) || '';
-  const parentFolderId = (env && (env.GOOGLE_DRIVE_PARENT_FOLDER_ID || env.DRIVE_PARENT_FOLDER_ID || env.RIVE_PARENT_FOLDER_ID)) || 
+  const rawParentFolderId = (env && (env.GOOGLE_DRIVE_PARENT_FOLDER_ID || env.DRIVE_PARENT_FOLDER_ID || env.RIVE_PARENT_FOLDER_ID)) || 
     (typeof process !== 'undefined' && process.env && (process.env.GOOGLE_DRIVE_PARENT_FOLDER_ID || process.env.DRIVE_PARENT_FOLDER_ID)) || null;
+
+  const clientId = String(rawClientId).trim().replace(/^["']|["']$/g, '');
+  const clientSecret = String(rawClientSecret).trim().replace(/^["']|["']$/g, '');
+  const refreshToken = String(rawRefreshToken).trim().replace(/^["']|["']$/g, '');
+  const parentFolderId = rawParentFolderId ? String(rawParentFolderId).trim().replace(/^["']|["']$/g, '') : null;
   const rootFolderName = 'Logbook_Penelitian_App';
 
   const missingKeys = [];
