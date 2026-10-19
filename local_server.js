@@ -702,8 +702,11 @@ const server = http.createServer(async (req, res) => {
   let filePath = path.join(PUBLIC_DIR, urlPath === '/' ? 'index.html' : urlPath);
   let ext = path.extname(filePath).toLowerCase();
 
-  // Jika permintaan rute SPA tanpa ekstensi (misal: /pricing, /checkout, /dashboard, /login)
-  if (!ext && !urlPath.startsWith('/api/')) {
+  // Jika permintaan rute tanpa ekstensi tapi file .html fisiknya ada (misal: /privacy -> privacy.html, /terms -> terms.html)
+  if (!ext && fs.existsSync(filePath + '.html')) {
+    filePath = filePath + '.html';
+    ext = '.html';
+  } else if (!ext && !urlPath.startsWith('/api/')) {
     filePath = path.join(PUBLIC_DIR, 'index.html');
     ext = '.html';
   }

@@ -13,15 +13,8 @@ const fs = require('fs');
 const path = require('path');
 const readline = require('readline');
 
-let googleapis = null;
-try {
-  googleapis = require('googleapis');
-} catch (e) {
-  console.error("Pustaka 'googleapis' belum terinstal. Silakan jalankan: npm install googleapis");
-  process.exit(1);
-}
+// Zero-dependency implementation menggunakan native Node.js fetch & http
 
-const { google } = googleapis;
 const PORT = 8085;
 const REDIRECT_URI = `http://localhost:${PORT}/oauth2callback`;
 const SCOPES = ['https://www.googleapis.com/auth/drive'];
@@ -97,13 +90,15 @@ async function main() {
     process.exit(1);
   }
 
-  const oauth2Client = new google.auth.OAuth2(clientId, clientSecret, REDIRECT_URI);
-
-  const authUrl = oauth2Client.generateAuthUrl({
+  const authParams = new URLSearchParams({
+    client_id: clientId,
+    redirect_uri: REDIRECT_URI,
+    response_type: 'code',
+    scope: SCOPES.join(' '),
     access_type: 'offline',
-    prompt: 'consent', // Memastikan refresh_token selalu diberikan
-    scope: SCOPES
+    prompt: 'consent'
   });
+  const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?${authParams.toString()}`;
 
   console.log('\n----------------------------------------------------------------');
   console.log('Langkah 1: Buka tautan berikut di peramban Anda:');
@@ -131,8 +126,23 @@ async function main() {
           </div>
         `);
 
-        // Tukar kode dengan token
-        const { tokens } = await oauth2Client.getToken(code);
+        // Tukar kode dengan token menggunakan fetch ke endpoint token Google
+        const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({
+            code: code,
+            client_id: clientId,
+            client_secret: clientSecret,
+            redirect_uri: REDIRECT_URI,
+            grant_type: 'authorization_code'
+          })
+        });
+
+        const tokens = await tokenRes.json();
+        if (tokens.error) {
+          throw new Error(`${tokens.error}: ${tokens.error_description || ''}`);
+        }
         const refreshToken = tokens.refresh_token;
 
         if (!refreshToken) {
